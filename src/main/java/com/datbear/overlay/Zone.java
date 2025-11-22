@@ -86,11 +86,8 @@ public class Zone {
     }
 
     public boolean contains(WorldPoint worldPoint) {
-        return minX <= worldPoint.getX()
-                && worldPoint.getX() <= maxX
-                && minY <= worldPoint.getY()
-                && worldPoint.getY() <= maxY
-                && minPlane <= worldPoint.getPlane()
+        return minX <= worldPoint.getX() && worldPoint.getX() <= maxX && minY <= worldPoint.getY()
+                && worldPoint.getY() <= maxY && minPlane <= worldPoint.getPlane()
                 && worldPoint.getPlane() <= maxPlane;
     }
 

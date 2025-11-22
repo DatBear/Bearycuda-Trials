@@ -23,8 +23,8 @@ public class TrialInfo {
     public int TotalCratesNeeded;
 
     public boolean HasRum;
-    public boolean HasFrogs;
-    public int FrogCount;
+    public boolean HasToads;
+    public int ToadCount;
 
     public static TrialInfo getCurrent(Client client) {
         var trialWidget = client.getWidget(SailingBtHud.BARRACUDA_TRIALS);
@@ -52,28 +52,29 @@ public class TrialInfo {
 
         var partialGfxSpriteId = client.getWidget(SailingBtHud.BT_PARTIAL_GFX).getSpriteId();
         info.HasRum = HasRum(info.Location, partialGfxSpriteId);
-        info.HasFrogs = HasFrogs(info.Location, partialGfxSpriteId);
+        info.HasToads = HasToads(info.Location, partialGfxSpriteId);
 
         var partialText = client.getWidget(SailingBtHud.BT_PARTIAL_TEXT).getText();
-        info.FrogCount = FrogCount(info.Location, partialText);
+        info.ToadCount = ToadCount(info.Location, partialText);
 
         return info;
     }
 
     @Override
     public String toString() {
-        return String.format("Location=%s, Rank=%s, PrimaryObjectives=%d/%d, Crates=%d/%d, HasRum=%b, HasFrogs=%b",
-                Location.toString(),
-                Rank.toString(),
-                CollectedPrimaryObjectives,
-                TotalPrimaryObjectivesNeeded,
-                CollectedCrates,
-                TotalCratesNeeded,
-                HasRum,
-                HasFrogs);
+        return String.format("Location=%s, Rank=%s, PrimaryObjectives=%d/%d, Crates=%d/%d, HasRum=%b, HasFrogs=%b", Location.toString(), Rank.toString(), CollectedPrimaryObjectives, TotalPrimaryObjectivesNeeded, CollectedCrates, TotalCratesNeeded, HasRum, HasToads);
     }
 
-    private static int FrogCount(TrialLocations location, String text) {
+    private static boolean HasToads(TrialLocations location, int spriteId) {
+        switch (location) {
+            case JubblyJive:
+                return spriteId == 7024;
+            default:
+                return false;
+        }
+    }
+
+    private static int ToadCount(TrialLocations location, String text) {
         switch (location) {
             case JubblyJive:
                 var pattern = Pattern.compile("(\\d+)");
@@ -96,15 +97,6 @@ public class TrialInfo {
         }
     }
 
-    private static boolean HasFrogs(TrialLocations location, int spriteId) {
-        switch (location) {
-            case JubblyJive:
-                return spriteId != 7025;
-            default:
-                return false;
-        }
-    }
-
     private static ObjectiveInfo parseObjectiveText(String text) {
         var info = new ObjectiveInfo();
         if (Strings.isNullOrEmpty(text)) {
@@ -122,9 +114,14 @@ public class TrialInfo {
 
     private static TrialRanks parseRank(int spriteId) {
         switch (spriteId) {
+            case 7026:
+                return TrialRanks.Unranked;// todo check
             case 7027:
                 return TrialRanks.Swordfish;
-            // todo add others
+            case 7028:
+                return TrialRanks.Shark;
+            case 7029:
+                return TrialRanks.Marlin;// todo check
         }
         return TrialRanks.Unknown;
     }

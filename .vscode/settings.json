@@ -13,5 +13,26 @@
     "java.project.referencedLibraries": [
         "${workspaceFolder}/lib/*.jar"
     ],
-    "java.import.gradle.java.home": "C:\\Program Files\\Eclipse Adoptium\\jdk-11.0.29.7-hotspot"
+    "java.import.gradle.java.home": "C:\\Program Files\\Eclipse Adoptium\\jdk-11.0.29.7-hotspot",
+    // Use our local Eclipse formatter profile (Red Hat Java will pick this up)
+    "java.format.settings.url": "${workspaceFolder}/.vscode/eclipse-java-formatter.xml",
+    "java.format.settings.profile": "CustomLongLineFormatter",
+
+    // Format on save for Java files and prefer the Red Hat Java formatter
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "redhat.java",
+    "[java]": {
+        "editor.defaultFormatter": "redhat.java",
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true
+    },
+    "java.compile.nullAnalysis.mode": "disabled"
+
+    // If you want Spotless/Gradle formatting to run on save automatically
+    // (so the pre-processor + spotlessApply happen), install "emeraldwalk.runonsave"
+    // and the following settings will call the Gradle tasks whenever a Java
+    // file is saved. This can be slow for large projects but does guarantee
+    // consistent formatting according to the project's Spotless/Eclipse rules.
+    ,
+    // Remove run-on-save Gradle formatting; rely solely on Eclipse profile
 }

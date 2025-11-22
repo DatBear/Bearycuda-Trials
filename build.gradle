@@ -1,79 +1,62 @@
 plugins {
-	id 'java'
-	id 'eclipse'
+    id 'java'
+    id 'eclipse'
 }
 
 repositories {
-	mavenLocal()
-	maven {
-		url = 'https://repo.runelite.net'
-	}
-	mavenCentral()
+    mavenLocal()
+    maven { url = 'https://repo.runelite.net' }
+    mavenCentral()
 }
 
 def runeLiteVersion = project.findProperty('runeLiteVersion') ?: '1.12.6'
 
 dependencies {
-	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
-	runtimeOnly group: 'net.runelite', name:'client', version: runeLiteVersion
-
-	compileOnly 'org.projectlombok:lombok:1.18.20'
-	annotationProcessor 'org.projectlombok:lombok:1.18.20'
-
-	testImplementation 'junit:junit:4.12'
-	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
-	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
+    compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
+    runtimeOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
+    compileOnly 'org.projectlombok:lombok:1.18.20'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+    testImplementation 'junit:junit:4.12'
+    testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
+    testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
 }
 
 group = 'com.datbear'
 version = '1.2'
 
 tasks.withType(JavaCompile) {
-	options.encoding = 'UTF-8'
-	options.release.set(11)
+    options.encoding = 'UTF-8'
+    options.release.set(11)
 }
 
-// Task to run RuneLite client with this plugin on the classpath and JDWP enabled for VS Code attach
 tasks.register('runRuneLite', JavaExec) {
-	group = 'run'
-	description = 'Run RuneLite client with BearSailing plugin loaded and JDWP (port 5005) for debugging'
-	// Use the test loader as the entry point so we can load the plugin from tests
-	mainClass.set('com.datbear.BearracudaTrialsPluginTest')
-	// Use the test runtimeClasspath so test classes (loader) are available
-	classpath = sourceSets.test.runtimeClasspath
-	jvmArgs '-ea', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005'
-	// Forward UTF-8 and any desired system properties
-	systemProperties System.getProperties().findAll { k, _ -> k.startsWith('runelite.') }
-	// Use a dedicated RuneLite profile and enable developer mode
-	args '--profile=plugin-dev', '--developer-mode'
+    group = 'run'
+    description = 'Run RuneLite client with BearSailing plugin loaded and JDWP (port 5005) for debugging'
+    mainClass.set('com.datbear.BearracudaTrialsPluginTest')
+    classpath = sourceSets.test.runtimeClasspath
+    jvmArgs '-ea', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005'
+    systemProperties System.getProperties().findAll { k, _ -> k.startsWith('runelite.') }
+    args '--profile=plugin-dev', '--developer-mode'
 }
 
-// Prints the full runtime classpath (Windows ; separated) for use in a direct VS Code launch config
 tasks.register('printRuntimeCp') {
     group = 'help'
     description = 'Print runtime classpath as a single line for launch.json classPaths'
-    doLast {
-        println sourceSets.main.runtimeClasspath.asPath
-    }
+    doLast { println sourceSets.main.runtimeClasspath.asPath }
 }
 
-// Copy all runtime dependency JARs (excluding compiled output dirs) into a flat lib/ directory
-// so we can use a concise wildcard (lib/*) in VS Code launch.json instead of enumerating .gradle cache paths.
 tasks.register('copyRuntimeDeps', Copy) {
-	group = 'build'
-	description = 'Copy runtime dependency JARs into lib/ for wildcard classpath use in VS Code.'
-	// Remove any existing jars in lib/ so old versions don't remain alongside new ones
-	doFirst {
-		def libDir = file("${projectDir}/lib")
-		if (libDir.exists()) {
-			println "Cleaning existing lib/ contents..."
-			delete libDir.listFiles()
-		}
-	}
-
-	// Only copy files (JARs); exclude directories that are part of the runtimeClasspath
-	from(configurations.runtimeClasspath.filter { it.isFile() })
-	into("${projectDir}/lib")
-	// Always copy the current runtime artifacts (don't keep duplicates)
-	duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    group = 'build'
+    description = 'Copy runtime dependency JARs into lib/ for wildcard classpath use in VS Code.'
+    doFirst {
+        def libDir = file("${projectDir}/lib")
+        if (libDir.exists()) {
+            println "Cleaning existing lib/ contents..."
+            delete libDir.listFiles()
+        }
+    }
+    from(configurations.runtimeClasspath.filter { it.isFile() })
+    into("${projectDir}/lib")
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
+

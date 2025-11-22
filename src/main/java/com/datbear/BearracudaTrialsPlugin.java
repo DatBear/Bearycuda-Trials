@@ -19,17 +19,12 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 // jubbly jive swordfish trial: https://www.youtube.com/watch?v=uPhcd84uVhY
 // jubbly jive shark trial: https://www.youtube.com/watch?v=SKnL37OCWVQ
 
-@Slf4j
-@PluginDescriptor(name = "Bearracuda Trials", description = "Show info to help with barracuda trials", tags = {
-        "overlay",
-        "sailing",
-        "barracuda",
-        "trials" //
+@Slf4j @PluginDescriptor(name = "Bearracuda Trials", description = "Show info to help with barracuda trials", tags = {
+        "overlay", "sailing", "barracuda", "trials" //
 })
 public class BearracudaTrialsPlugin extends Plugin {
     @Inject
@@ -37,7 +32,6 @@ public class BearracudaTrialsPlugin extends Plugin {
 
     @Inject
     private OverlayManager overlayManager;
-
     @Inject
     private Notifier notifier;
 
@@ -57,30 +51,16 @@ public class BearracudaTrialsPlugin extends Plugin {
 
     private static final boolean isDebug = true;
 
-    private final Set<Integer> CARGO_CONTAINER_IDS = Set.of(
-            33733);
-
+    private final Set<Integer> CARGO_CONTAINER_IDS = Set.of(33733);
     private final Set<Integer> SALVAGING_HOOK_SLOTS = Set.of(14);
 
-    private final Set<String> CREW_MEMBER_NAMES = Set.of(
-            "Ex-Captain Siad",
-            "Jobless Jim"//
-    );
+    private final Set<String> CREW_MEMBER_NAMES = Set.of("Ex-Captain Siad", "Jobless Jim");
 
     private TrialInfo currentTrial = null;
 
-    // SwordfishBestLine: use a static, precomputed path (start/end at 3034,2918)
-    // NOTE: this is a fixed, hand-picked route that passes near Swordfish crates
-    // Static route: Start/End at 3034,2918. Includes all Swordfish-rank crate
-    // locations and a selection of nearby boost points. The order goes around
-    // the cluster once (no backtracking) and returns to the start.
     @Getter(AccessLevel.PACKAGE)
     private static final List<WorldPoint> TemporTantrumSwordfishBestLine = List.of(
-            // start
-            new WorldPoint(3034, 2918, 0),
-
-            // clockwise ordering (reverse of previous list) - start/north -> east -> south
-            // -> west -> back north
+            new WorldPoint(3034, 2918, 0), // start
             new WorldPoint(3013, 2910, 0), // boost (near start, closing arc)
 
             // head north-west -> north arc
@@ -89,7 +69,8 @@ public class BearracudaTrialsPlugin extends Plugin {
             new WorldPoint(2981, 2848, 0), // crate
 
             // western / inner arc
-            // new WorldPoint(2954, 2819, 0), // crate
+            // new WorldPoint(2954, 2819, 0),// crate
+
             new WorldPoint(2978, 2828, 0), // crate
             new WorldPoint(2990, 2808, 0), // crate
             new WorldPoint(3001, 2788, 0), // crate
@@ -109,7 +90,6 @@ public class BearracudaTrialsPlugin extends Plugin {
             new WorldPoint(3078, 2863, 0), // crate
             new WorldPoint(3082, 2875, 0), // crate
             new WorldPoint(3084, 2896, 0), // crate
-
             new WorldPoint(3049, 2918, 0), // crate
 
             new WorldPoint(3034, 2918, 0) // return to start
@@ -118,12 +98,11 @@ public class BearracudaTrialsPlugin extends Plugin {
     @Getter(AccessLevel.PACKAGE)
     private static final List<WorldPoint> TemporTantrumMarlinBestLine = List.of(
             new WorldPoint(3034, 2918, 0), // start
-
             new WorldPoint(3027, 2913, 0), // boost
-
             new WorldPoint(3017, 2899, 0), // boost
             new WorldPoint(3018, 2889, 0),
             new WorldPoint(3014, 2885, 0),
+            new WorldPoint(3002, 2868, 0),
             new WorldPoint(3002, 2868, 0),
             new WorldPoint(3004, 2834, 0),
             new WorldPoint(3006, 2819, 0),
@@ -182,7 +161,6 @@ public class BearracudaTrialsPlugin extends Plugin {
             new WorldPoint(3072, 2915, 0),
             new WorldPoint(3059, 2921, 0),
             new WorldPoint(3037, 2926, 0),
-
             new WorldPoint(3034, 2918, 0) // return to start
     );
 
@@ -210,7 +188,7 @@ public class BearracudaTrialsPlugin extends Plugin {
             new WorldPoint(2278, 3001, 0),
             new WorldPoint(2295, 3000, 0), // click yellow outcrop
             new WorldPoint(2299, 3007, 0),
-            new WorldPoint(2302, 3017, 0), // click red
+            new WorldPoint(2302, 3017, 0), // click red outcrop
             new WorldPoint(2310, 3021, 0),
             new WorldPoint(2329, 3016, 0),
             new WorldPoint(2339, 3004, 0),
@@ -225,12 +203,11 @@ public class BearracudaTrialsPlugin extends Plugin {
             new WorldPoint(2426, 2936, 0),
             new WorldPoint(2434, 2949, 0),
             new WorldPoint(2434, 2969, 0),
-
             new WorldPoint(2438, 2989, 0),
             new WorldPoint(2438, 2989, 0), // click pink outcrop
             new WorldPoint(2434, 2998, 0),
-            new WorldPoint(2432, 3021, 0), // click white outcrop
-            new WorldPoint(2413, 3026, 0),
+            new WorldPoint(2432, 3021, 0),
+            new WorldPoint(2413, 3026, 0), // click white outcrop
             new WorldPoint(2402, 3021, 0),
             new WorldPoint(2394, 3020, 0),
             new WorldPoint(2382, 3025, 0),
@@ -251,241 +228,87 @@ public class BearracudaTrialsPlugin extends Plugin {
             new WorldPoint(2424, 2974, 0),
             new WorldPoint(2418, 2988, 0), // click pink outcrop
             new WorldPoint(2414, 2993, 0),
-            new WorldPoint(2417, 3003, 0),
-            new WorldPoint(2436, 3023, 0)// end!
+            new WorldPoint(2417, 3003, 0), //click white outcrop
+            new WorldPoint(2436, 3023, 0) // end
     );
 
+    private static final List<ToadFlagColors> JubblySharkToadOrder = List.of(
+            ToadFlagColors.Pickup,
+            ToadFlagColors.Yellow,
+            ToadFlagColors.Red,
+            ToadFlagColors.Yellow,
+            ToadFlagColors.Green,
+            ToadFlagColors.Pink,
+            ToadFlagColors.White,
+            ToadFlagColors.Blue,
+            ToadFlagColors.Orange,
+            ToadFlagColors.Teal,
+            ToadFlagColors.Pink,
+            ToadFlagColors.White //fin
+    );
+
+    @Getter(AccessLevel.PACKAGE)
     private static final List<TrialRoute> AllTrialRoutes = List.of(
-            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Swordfish,
-                    TemporTantrumSwordfishBestLine),
-            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Marlin,
-                    TemporTantrumMarlinBestLine),
-            new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Shark,
-                    JubblySharkBestLine)//
-    );
+            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Swordfish, TemporTantrumSwordfishBestLine),
+            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Marlin, TemporTantrumMarlinBestLine),
+            new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Shark, JubblySharkBestLine, 12, JubblySharkToadOrder));
 
-    // Mutable visited waypoint indices for the static SwordfishBestLine.
-    // The values are indices into SwordfishBestLine; synchronized for tick-time
-    // updates.
-    private final Set<Integer> visitedSwordfishWaypoints = new HashSet<>();
+    @Getter(AccessLevel.PACKAGE)
+    private int lastVisitedIndex = -1;
 
-    // How close (in world tiles) the player must be to mark a waypoint visited
-    private static final int SWORDFISH_VISIT_TOLERANCE = 6;
+    private static final int VISIT_TOLERANCE = 6;
 
-    // Marlin route visited tracking
-    private final Set<Integer> visitedMarlinWaypoints = new HashSet<>();
-    private static final int MARLIN_VISIT_TOLERANCE = 6;
-
-    /**
-     * Mark waypoints visited when player is within tolerance tiles.
-     */
-    public void markWaypointsVisited(final WorldPoint player, final int tolerance) {
-        if (player == null || TemporTantrumSwordfishBestLine == null || TemporTantrumSwordfishBestLine.size() == 0)
+    public void markNextWaypointVisited(final WorldPoint player, final TrialRoute route, final int tolerance) {
+        if (player == null || route == null || route.Points == null || route.Points.isEmpty()) {
             return;
-
-        synchronized (visitedSwordfishWaypoints) {
-            for (int i = 0; i < TemporTantrumSwordfishBestLine.size(); i++) {
-                if (visitedSwordfishWaypoints.contains(i))
-                    continue;
-
-                WorldPoint wp = TemporTantrumSwordfishBestLine.get(i);
-                if (wp == null)
-                    continue;
-
-                // convert the static route point to the client's instance world point
-                WorldView pv = client.getTopLevelWorldView();
-                WorldPoint inst = com.datbear.overlay.WorldPerspective.getInstanceWorldPointFromReal(client, pv, wp);
-                if (inst == null)
-                    continue;
-
-                double d = Math.hypot(player.getX() - inst.getX(), player.getY() - inst.getY());
-                if (d <= tolerance) {
-                    visitedSwordfishWaypoints.add(i);
-                    log.info("Visited swordfish waypoint {} at {} (player {})", i, wp, player);
-                }
-            }
         }
-        // If all waypoints are now visited, start the route over by clearing
-        // the visited set so the route can be completed again.
-        if (visitedSwordfishWaypoints.size() >= TemporTantrumSwordfishBestLine.size()) {
-            log.info("All swordfish waypoints visited — resetting visited set so route restarts");
-            visitedSwordfishWaypoints.clear();
+        int nextIdx = lastVisitedIndex + 1;
+        if (nextIdx >= route.Points.size()) {
+            return; // finished route
         }
-    }
-
-    public void markMarlinWaypointsVisited(final WorldPoint player, final int tolerance) {
-        if (player == null || TemporTantrumMarlinBestLine == null || TemporTantrumMarlinBestLine.size() == 0)
+        WorldPoint target = route.Points.get(nextIdx);
+        if (target == null) {
             return;
-
-        synchronized (visitedMarlinWaypoints) {
-            for (int i = 0; i < TemporTantrumMarlinBestLine.size(); i++) {
-                if (visitedMarlinWaypoints.contains(i))
-                    continue;
-
-                WorldPoint wp = TemporTantrumMarlinBestLine.get(i);
-                if (wp == null)
-                    continue;
-
-                WorldView pv = client.getTopLevelWorldView();
-                WorldPoint inst = com.datbear.overlay.WorldPerspective.getInstanceWorldPointFromReal(client, pv, wp);
-                if (inst == null)
-                    continue;
-
-                // use cartesian distance for simplicity
-                double d = Math.hypot(player.getX() - inst.getX(), player.getY() - inst.getY());
-                if (d <= tolerance) {
-                    visitedMarlinWaypoints.add(i);
-                    log.info("Visited marlin waypoint {} at {} (player {})", i, wp, player);
-                }
-            }
         }
-        // If we've visited them all, reset so we can begin again
-        if (visitedMarlinWaypoints.size() >= TemporTantrumMarlinBestLine.size()) {
-            log.info("All marlin waypoints visited — resetting visited set so route restarts");
-            visitedMarlinWaypoints.clear();
+        double dist = Math.hypot(player.getX() - target.getX(), player.getY() - target.getY());
+        if (dist <= tolerance) {
+            lastVisitedIndex = nextIdx;
+            log.info("Visited waypoint {} / {} for route {}", lastVisitedIndex, route.Points.size() - 1, route.Rank);
         }
     }
 
-    public List<Integer> getNextUnvisitedMarlinWaypointIndices(final WorldPoint player, final int limit) {
-        if (player == null || TemporTantrumMarlinBestLine == null || TemporTantrumMarlinBestLine.isEmpty()
-                || limit <= 0)
+    public List<Integer> getNextIndicesAfterLastVisited(final TrialRoute route, final int limit) {
+        if (route == null || route.Points == null || route.Points.isEmpty() || limit <= 0) {
             return Collections.emptyList();
-
-        final int n = TemporTantrumMarlinBestLine.size();
-
-        synchronized (visitedMarlinWaypoints) {
-            List<Integer> result = new ArrayList<>();
-
-            // Always start scanning from the first waypoint (index 0) so the
-            // visualized path follows the fixed route order.
-            int startIdx = 0;
-
-            // First pass: collect up-to `limit` unvisited indices starting at
-            // nearest unvisited, wrapping circularly.
-            int idx = startIdx;
-            int loopCount = 0;
-            while (result.size() < limit && loopCount < n) {
-                if (!visitedMarlinWaypoints.contains(idx)) {
-                    result.add(idx);
-                }
-                idx = (idx + 1) % n;
-                loopCount++;
-            }
-
-            // If we still don't have enough, do a second pass and include
-            // visited indices to fill the returned list so the overlay can
-            // display a continuous polyline (wrapping to the start).
-            idx = startIdx;
-            loopCount = 0;
-            while (result.size() < limit && loopCount < n) {
-                if (!result.contains(idx)) {
-                    result.add(idx);
-                }
-                idx = (idx + 1) % n;
-                loopCount++;
-            }
-
-            return result.isEmpty() ? Collections.emptyList() : result;
         }
-    }
-
-    public List<WorldPoint> getVisibleMarlinLineForPlayer(final WorldPoint player, final int limit) {
-        if (player == null)
+        int start = lastVisitedIndex + 1;
+        if (start >= route.Points.size()) {
             return Collections.emptyList();
-
-        final List<Integer> nextIdx = getNextUnvisitedMarlinWaypointIndices(player, limit);
-        if (nextIdx.isEmpty())
-            return Collections.emptyList();
-
-        List<WorldPoint> out = new ArrayList<>();
-        out.add(player);
-        for (int idx : nextIdx) {
-            WorldPoint real = TemporTantrumMarlinBestLine.get(idx);
-            WorldView pv = client.getTopLevelWorldView();
-            WorldPoint inst = WorldPerspective.getInstanceWorldPointFromReal(client, pv, real);
-            if (inst != null) {
-                out.add(inst);
-            }
+        }
+        List<Integer> out = new ArrayList<>(limit);
+        for (int i = start; i < route.Points.size() && out.size() < limit; i++) {
+            out.add(i);
         }
         return out;
     }
 
-    public void resetVisitedMarlinWaypoints() {
-        visitedMarlinWaypoints.clear();
-    }
-
-    public List<Integer> getNextUnvisitedWaypointIndices(final WorldPoint player, final int limit) {
-        if (player == null || TemporTantrumSwordfishBestLine == null || TemporTantrumSwordfishBestLine.isEmpty()
-                || limit <= 0)
+    public List<WorldPoint> getVisibleLineForRoute(final WorldPoint player, final TrialRoute route, final int limit) {
+        if (player == null || route == null) {
             return Collections.emptyList();
-
-        final int n = TemporTantrumSwordfishBestLine.size();
-
-        synchronized (visitedSwordfishWaypoints) {
-            List<Integer> result = new ArrayList<>();
-
-            // Always start scanning from the first waypoint (index 0) so the
-            // path is traversed in fixed route order.
-            int startIdx = 0;
-
-            int idx = startIdx;
-            int loopCount = 0;
-            while (result.size() < limit && loopCount < n) {
-                if (!visitedSwordfishWaypoints.contains(idx)) {
-                    result.add(idx);
-                }
-                idx = (idx + 1) % n;
-                loopCount++;
-            }
-
-            // Fill remainder with visited indices (wrapping) so user sees a
-            // continuous path even if fewer than `limit` unvisited remain.
-            idx = startIdx;
-            loopCount = 0;
-            while (result.size() < limit && loopCount < n) {
-                if (!result.contains(idx)) {
-                    result.add(idx);
-                }
-                idx = (idx + 1) % n;
-                loopCount++;
-            }
-
-            return result.isEmpty() ? Collections.emptyList() : result;
         }
-    }
 
-    /**
-     * Return a polyline for overlay: player's current location followed by up to
-     * `limit`
-     * next unvisited waypoints (in order). Useful for drawing only the next
-     * segments.
-     */
-    public List<WorldPoint> getVisibleSwordfishLineForPlayer(final WorldPoint player, final int limit) {
-        if (player == null)
+        final List<Integer> nextIdx = getNextIndicesAfterLastVisited(route, limit);
+        if (nextIdx.isEmpty()) {
             return Collections.emptyList();
-
-        final List<Integer> nextIdx = getNextUnvisitedWaypointIndices(player, limit);
-        if (nextIdx.isEmpty())
-            return Collections.emptyList();
+        }
 
         List<WorldPoint> out = new ArrayList<>();
         out.add(player);
         for (int idx : nextIdx) {
-            WorldPoint real = TemporTantrumSwordfishBestLine.get(idx);
-            WorldView pv = client.getTopLevelWorldView();
-            WorldPoint inst = com.datbear.overlay.WorldPerspective.getInstanceWorldPointFromReal(client, pv, real);
-            if (inst != null) {
-                out.add(inst);
-            }
+            WorldPoint real = route.Points.get(idx);
+            out.add(real);
         }
         return out;
-    }
-
-    /**
-     * Reset visited waypoints (used when region changes or plugin shutdown).
-     */
-    public void resetVisitedSwordfishWaypoints() {
-        visitedSwordfishWaypoints.clear();
     }
 
     private final Set<Integer> TRIAL_CRATE_PROJECTILE_IDS = Set.of(3497);// crates spawn this projectile when hit
@@ -498,10 +321,9 @@ public class BearracudaTrialsPlugin extends Plugin {
     private final Set<Integer> TRIAL_CRATE_ANIMS = Set.of(8867);
     private final Set<Integer> SPEED_BOOST_ANIMS = Set.of(13159);
 
-    // last position where the menu was opened (canvas coordinates) — used for
-    // debug 'Copy tile worldpoint' so we copy according to menu-open location
-    // instead of where the mouse is at click time.
-    private volatile net.runelite.api.Point lastMenuCanvasPosition = null;
+    // last position where the menu was opened (canvas coordinates) — used for debug 'Copy tile worldpoint'
+    // so we copy according to menu-open location instead of where the mouse is at click time.
+    private volatile Point lastMenuCanvasPosition = null;
 
     @Getter(AccessLevel.PACKAGE)
     private int cargoItemCount = 0;
@@ -534,11 +356,16 @@ public class BearracudaTrialsPlugin extends Plugin {
         if (client == null || client.getLocalPlayer() == null) {
             return;
         }
-
-        var trialInfo = TrialInfo.getCurrent(client);
-        if (trialInfo != null && (currentTrial == null || !currentTrial.toString().equals(trialInfo.toString()))) {
-            log.info("Trial changed: {}.", trialInfo.toString());
+        TrialRoute prevActive = getActiveTrialRoute();
+        TrialInfo trialInfo = TrialInfo.getCurrent(client);
+        if (trialInfo != null) {
             currentTrial = trialInfo;
+            TrialRoute newActive = getActiveTrialRoute();
+            if (prevActive != newActive) {
+                // Route actually changed: reset single index tracker
+                lastVisitedIndex = -1;
+                log.info("Active route changed; resetting lastVisitedIndex (prev={}, new={})", prevActive == null ? "null" : prevActive.Rank, newActive == null ? "null" : newActive.Rank);
+            }
         }
 
         final var player = client.getLocalPlayer();
@@ -547,14 +374,45 @@ public class BearracudaTrialsPlugin extends Plugin {
         if (playerPoint == null)
             return;
 
-        // Mark any nearby waypoints visited. Uses the default tolerances.
-        markWaypointsVisited(playerPoint, SWORDFISH_VISIT_TOLERANCE);
-        markMarlinWaypointsVisited(playerPoint, MARLIN_VISIT_TOLERANCE);
+        TrialRoute active = getActiveTrialRoute();
+        if (active != null) {
+            markNextWaypointVisited(playerPoint, active, VISIT_TOLERANCE);
+        }
+    }
+
+    public TrialRoute getActiveTrialRoute() {
+        if (currentTrial == null)
+            return null;
+
+        for (TrialRoute r : AllTrialRoutes) {
+            if (r == null)
+                continue;
+            if (r.Location == currentTrial.Location && r.Rank == currentTrial.Rank)
+                return r;
+        }
+        return null;
+    }
+
+    public List<WorldPoint> getVisibleActiveLineForPlayer(final WorldPoint player, final int limit) {
+        var rt = getActiveTrialRoute();
+        if (rt == null)
+            return Collections.emptyList();
+
+        // Route-agnostic: delegate to generic per-route logic
+        return getVisibleLineForRoute(player, rt, limit);
+    }
+
+    public List<Integer> getNextUnvisitedIndicesForActiveRoute(final WorldPoint player, final int limit) {
+        var rt = getActiveTrialRoute();
+        if (rt == null) {
+            return Collections.emptyList();
+        }
+        return getNextIndicesAfterLastVisited(rt, limit);
     }
 
     @Subscribe
     public void onGameObjectSpawned(GameObjectSpawned event) {
-        logCrateBoostSpawns(event);
+        // logCrateBoostSpawns(event);
     }
 
     @Subscribe
@@ -593,7 +451,8 @@ public class BearracudaTrialsPlugin extends Plugin {
 
     @Subscribe
     public void onChatMessage(ChatMessage chatMessage) {
-        if (chatMessage.getType() != ChatMessageType.SPAM && chatMessage.getType() != ChatMessageType.GAMEMESSAGE)
+        if (chatMessage.getType() != ChatMessageType.SPAM
+                && chatMessage.getType() != ChatMessageType.GAMEMESSAGE)
             return;
 
         String msg = chatMessage.getMessage();
@@ -616,10 +475,12 @@ public class BearracudaTrialsPlugin extends Plugin {
             if (wp == null)
                 return;
 
-            String toCopy = String.format("new WorldPoint(%d, %d, %d),", wp.getX(), wp.getY(), wp.getPlane());
+            String toCopy = String
+                    .format("new WorldPoint(%d, %d, %d),", wp.getX(), wp.getY(), wp.getPlane());
 
             try {
-                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(toCopy);
+                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(
+                        toCopy);
                 java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
                 notifier.notify("Copied worldpoint to clipboard: " + toCopy);
             } catch (Exception ex) {
@@ -629,9 +490,11 @@ public class BearracudaTrialsPlugin extends Plugin {
             // mark event consumed so other handlers don't process it
             event.consume();
         } else if (event.getMenuOption() != null && event.getMenuOption().equals(copyTileOption)) {
-            // Find the scene tile whose canvas polygon contains the menu position
+            // Find the scene tile whose canvas polygon contains the menu
+            // position
             // Use the stored menu-open position; fall back to current mouse pos
-            Point mouse = lastMenuCanvasPosition != null ? lastMenuCanvasPosition : client.getMouseCanvasPosition();
+            Point mouse = lastMenuCanvasPosition != null ? lastMenuCanvasPosition
+                    : client.getMouseCanvasPosition();
             WorldPoint tileWp = null;
 
             try {
@@ -664,15 +527,16 @@ public class BearracudaTrialsPlugin extends Plugin {
                 // fall back to null
             }
 
-            WorldPoint wp = tileWp == null
-                    ? client.getLocalPlayer() == null ? null : client.getLocalPlayer().getWorldLocation()
-                    : tileWp;
+            WorldPoint wp = tileWp == null ? client.getLocalPlayer() == null ? null
+                    : client.getLocalPlayer().getWorldLocation() : tileWp;
             if (wp == null)
                 return;
 
-            String toCopy = String.format("new WorldPoint(%d, %d, %d),", wp.getX(), wp.getY(), wp.getPlane());
+            String toCopy = String
+                    .format("new WorldPoint(%d, %d, %d),", wp.getX(), wp.getY(), wp.getPlane());
             try {
-                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(toCopy);
+                java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(
+                        toCopy);
                 java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
                 notifier.notify("Copied tile worldpoint to clipboard: " + toCopy);
             } catch (Exception ex) {
@@ -734,18 +598,14 @@ public class BearracudaTrialsPlugin extends Plugin {
         // Create tile copy entry if missing
         if (!hasCopyTile) {
             MenuEntry copyTile = client.getMenu().createMenuEntry(-1)
-                    .setOption("Copy tile worldpoint")
-                    .setTarget("")
-                    .setType(MenuAction.RUNELITE);
+                    .setOption("Copy tile worldpoint").setTarget("").setType(MenuAction.RUNELITE);
             list.add(copyTile);
         }
 
         // Create player copy entry if missing
         if (!hasCopyPlayer) {
-            MenuEntry copyPlayer = client.getMenu().createMenuEntry(-1)
-                    .setOption("Copy worldpoint")
-                    .setTarget("")
-                    .setType(MenuAction.RUNELITE);
+            MenuEntry copyPlayer = client.getMenu().createMenuEntry(-1).setOption("Copy worldpoint")
+                    .setTarget("").setType(MenuAction.RUNELITE);
             list.add(copyPlayer);
         }
 
@@ -766,9 +626,6 @@ public class BearracudaTrialsPlugin extends Plugin {
     }
 
     private void reset() {
-        // Reset route-tracking state
-        resetVisitedSwordfishWaypoints();
-
     }
 
     private void logCrateBoostSpawns(GameObjectSpawned event) {
@@ -777,8 +634,10 @@ public class BearracudaTrialsPlugin extends Plugin {
             return;
         }
 
-        // Check the spawned object's animation via the renderable. We're looking for
-        // the crate/speed boost animation ids (TRIAL_CRATE_ANIM / SPEED_BOOST_ANIM).
+        // Check the spawned object's animation via the renderable. We're
+        // looking for
+        // the crate/speed boost animation ids (TRIAL_CRATE_ANIM /
+        // SPEED_BOOST_ANIM).
         Renderable renderable = gameObject.getRenderable();
         if (!(renderable instanceof net.runelite.api.DynamicObject)) {
             return; // not an animating dynamic object
@@ -802,15 +661,16 @@ public class BearracudaTrialsPlugin extends Plugin {
         try {
             wp = gameObject.getWorldLocation();
         } catch (Exception ex) {
-            log.info("GameObject (id={}) spawned but getWorldLocation threw: {}",
-                    gameObject.getId(), ex.toString());
+            log.info(
+                    "GameObject (id={}) spawned but getWorldLocation threw: {}",
+                    gameObject.getId(),
+                    ex.toString());
         }
 
         ObjectComposition objectComposition = client.getObjectDefinition(gameObject.getId());
         if (objectComposition.getImpostorIds() == null) {
             String name = objectComposition.getName();
-            log.info("Gameobject (id={}) spawned with name='{}'", gameObject.getId(),
-                    name);
+            log.info("Gameobject (id={}) spawned with name='{}'", gameObject.getId(), name);
             if (Strings.isNullOrEmpty(name) || name.equals("null")) {
                 // name has changed?
                 return;
@@ -823,13 +683,11 @@ public class BearracudaTrialsPlugin extends Plugin {
         String type = isCrateAnim ? "CRATE" : "SPEED BOOST";
         if (wp != null) {
             if (isCrateAnim) {
-                log.info("[SPAWN] {} -> GameObject id={} world={} (hash={}) minLocation={} poly={}",
-                        type, animId, gameObject.getId(), wp, gameObject.getHash(), minLocation, poly);
+                log.info("[SPAWN] {} -> GameObject id={} world={} (hash={}) minLocation={} poly={}", type, animId, gameObject.getId(), wp, gameObject.getHash(), minLocation, poly);
             }
 
         } else {
-            log.info("[SPAWN] {} -> GameObject id={} (no world point available)",
-                    type, gameObject.getId());
+            log.info("[SPAWN] {} -> GameObject id={} (no world point available)", type, gameObject.getId());
         }
     }
 

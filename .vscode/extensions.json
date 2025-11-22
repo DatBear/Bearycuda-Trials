@@ -6,5 +6,6 @@
     "vscjava.vscode-java-test",
     "vscjava.vscode-java-debug",
     "vscjava.vscode-java-dependency"
-  ]
+  ],
+  "unwantedRecommendations": []
 }
