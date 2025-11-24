@@ -1,26 +1,60 @@
 package com.datbear;
 
-import com.datbear.data.*;
-import com.datbear.overlay.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.inject.Inject;
+
+import com.datbear.data.AllSails;
+import com.datbear.data.ToadFlagColors;
+import com.datbear.data.ToadFlagGameObject;
+import com.datbear.data.TrialInfo;
+import com.datbear.data.TrialLocations;
+import com.datbear.data.TrialRanks;
+import com.datbear.data.TrialRoute;
 import com.google.common.base.Strings;
 import com.google.inject.Provides;
+
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
-import net.runelite.api.events.*;
-import net.runelite.api.gameval.ObjectID;
+import net.runelite.api.ChatMessageType;
+import net.runelite.api.Client;
+import net.runelite.api.DynamicObject;
+import net.runelite.api.GameObject;
+import net.runelite.api.GameState;
+import net.runelite.api.MenuAction;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.NPC;
+import net.runelite.api.ObjectComposition;
+import net.runelite.api.Point;
+import net.runelite.api.Renderable;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.GameObjectDespawned;
+import net.runelite.api.events.GameObjectSpawned;
+import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.events.GraphicsObjectCreated;
+import net.runelite.api.events.GroundObjectSpawned;
+import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.OverheadTextChanged;
+import net.runelite.api.events.PostMenuSort;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.Notifier;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
-import javax.inject.Inject;
-
-import java.util.*;
 
 // jubbly jive swordfish trial: https://www.youtube.com/watch?v=uPhcd84uVhY
 // jubbly jive shark trial: https://www.youtube.com/watch?v=SKnL37OCWVQ
@@ -70,108 +104,154 @@ public class BearracudaTrialsPlugin extends Plugin {
 
     @Getter(AccessLevel.PACKAGE)
     private static final List<WorldPoint> TemporTantrumSwordfishBestLine = List.of(
-            new WorldPoint(3034, 2918, 0), // start
-            new WorldPoint(3013, 2910, 0), // boost (near start, closing arc)
+            new WorldPoint(3035, 2922, 0), // start
+            new WorldPoint(3025, 2911, 0),
+            new WorldPoint(3017, 2900, 0),
+            new WorldPoint(2996, 2896, 0),
+            new WorldPoint(2994, 2882, 0),
+            new WorldPoint(2979, 2866, 0),
+            new WorldPoint(2983, 2839, 0),
+            new WorldPoint(2979, 2827, 0),
+            new WorldPoint(2990, 2809, 0),
+            new WorldPoint(3001, 2787, 0),
+            new WorldPoint(3013, 2769, 0),
+            new WorldPoint(3022, 2762, 0),
+            new WorldPoint(3039, 2760, 0),
+            new WorldPoint(3056, 2763, 0),
+            new WorldPoint(3054, 2763, 0),
+            new WorldPoint(3057, 2792, 0),
+            new WorldPoint(3065, 2811, 0),
+            new WorldPoint(3078, 2827, 0),
+            new WorldPoint(3078, 2864, 0),
+            new WorldPoint(3084, 2875, 0),
+            new WorldPoint(3091, 2887, 0),
+            new WorldPoint(3072, 2916, 0),
+            new WorldPoint(3052, 2920, 0),
+            new WorldPoint(3035, 2922, 0) // end
+    );
 
-            // head north-west -> north arc
-            new WorldPoint(2994, 2891, 0), // crate
-            new WorldPoint(2978, 2866, 0), // crate
-            new WorldPoint(2981, 2848, 0), // crate
-
-            // western / inner arc
-            // new WorldPoint(2954, 2819, 0),// crate
-
-            new WorldPoint(2978, 2828, 0), // crate
-            new WorldPoint(2990, 2808, 0), // crate
-            new WorldPoint(3001, 2788, 0), // crate
-
-            // south / southwest side
-            new WorldPoint(3012, 2768, 0), // crate
-            new WorldPoint(3037, 2758, 0), // boost (southern arc)
-
-            // east / southeast side (boosts)
-            new WorldPoint(3054, 2761, 0), // boost
-            new WorldPoint(3057, 2792, 0), // crate
-            new WorldPoint(3065, 2811, 0), // crate
-            new WorldPoint(3077, 2825, 0), // crate
-            new WorldPoint(3074, 2834, 0), // boost
-
-            // east -> northeast -> north
-            new WorldPoint(3078, 2863, 0), // crate
-            new WorldPoint(3082, 2875, 0), // crate
-            new WorldPoint(3084, 2896, 0), // crate
-            new WorldPoint(3049, 2918, 0), // crate
-
-            new WorldPoint(3034, 2918, 0) // return to start
+    @Getter(AccessLevel.PACKAGE)
+    private static final List<WorldPoint> TemporTantrumSharkBestLine = List.of(
+            new WorldPoint(3035, 2922, 0), // start
+            new WorldPoint(3017, 2898, 0),
+            new WorldPoint(3017, 2889, 0),
+            new WorldPoint(3001, 2869, 0),
+            new WorldPoint(3002, 2858, 0),
+            new WorldPoint(3004, 2827, 0),
+            new WorldPoint(3009, 2816, 0),
+            new WorldPoint(3019, 2814, 0),
+            new WorldPoint(3027, 2798, 0),
+            new WorldPoint(3039, 2778, 0),
+            new WorldPoint(3045, 2777, 0),
+            new WorldPoint(3057, 2792, 0),
+            new WorldPoint(3069, 2814, 0),
+            new WorldPoint(3076, 2825, 0),
+            new WorldPoint(3082, 2873, 0),
+            new WorldPoint(3076, 2883, 0),
+            new WorldPoint(3077, 2896, 0),
+            new WorldPoint(3060, 2906, 0),
+            new WorldPoint(3040, 2921, 0),
+            new WorldPoint(3027, 2913, 0),
+            new WorldPoint(3013, 2910, 0),
+            new WorldPoint(2994, 2896, 0),
+            new WorldPoint(2994, 2882, 0),
+            new WorldPoint(2977, 2865, 0),
+            new WorldPoint(2982, 2847, 0),
+            new WorldPoint(2979, 2830, 0),
+            new WorldPoint(2991, 2806, 0),
+            new WorldPoint(3014, 2763, 0),
+            new WorldPoint(3038, 2758, 0),
+            new WorldPoint(3054, 2761, 0),
+            new WorldPoint(3066, 2768, 0),
+            new WorldPoint(3075, 2776, 0),
+            new WorldPoint(3084, 2801, 0),
+            new WorldPoint(3081, 2813, 0),
+            new WorldPoint(3094, 2828, 0),
+            new WorldPoint(3093, 2843, 0),
+            new WorldPoint(3093, 2864, 0),
+            new WorldPoint(3100, 2872, 0),
+            new WorldPoint(3092, 2884, 0),
+            new WorldPoint(3073, 2916, 0),
+            new WorldPoint(3053, 2921, 0),
+            new WorldPoint(3035, 2922, 0) // end
     );
 
     @Getter(AccessLevel.PACKAGE)
     private static final List<WorldPoint> TemporTantrumMarlinBestLine = List.of(
-            new WorldPoint(3034, 2918, 0), // start
-            new WorldPoint(3027, 2913, 0), // boost
-            new WorldPoint(3017, 2899, 0), // boost
-            new WorldPoint(3018, 2889, 0),
-            new WorldPoint(3014, 2885, 0),
-            new WorldPoint(3002, 2868, 0),
-            new WorldPoint(3002, 2868, 0),
-            new WorldPoint(3004, 2834, 0),
-            new WorldPoint(3006, 2819, 0),
-            new WorldPoint(3020, 2814, 0),
+            new WorldPoint(3035, 2922, 0), // start
+            new WorldPoint(3017, 2898, 0),
+            new WorldPoint(3017, 2889, 0),
+            new WorldPoint(3001, 2869, 0),
+            new WorldPoint(3002, 2858, 0),
+            new WorldPoint(3004, 2827, 0),
+            new WorldPoint(3009, 2816, 0),
+            new WorldPoint(3019, 2814, 0),
             new WorldPoint(3030, 2815, 0),
-            new WorldPoint(3028, 2789, 0),
-            new WorldPoint(3045, 2775, 0), // click rum boat here
+            new WorldPoint(3027, 2798, 0),
+            new WorldPoint(3039, 2778, 0),
+            new WorldPoint(3045, 2777, 0),
             new WorldPoint(3057, 2792, 0),
-            new WorldPoint(3066, 2811, 0),
-            new WorldPoint(3078, 2827, 0),
-            new WorldPoint(3077, 2862, 0),
-            new WorldPoint(3082, 2875, 0),
-            new WorldPoint(3060, 2883, 0),
-            new WorldPoint(3061, 2901, 0),
-            new WorldPoint(3027, 2913, 0), // lap 1 complete
+            new WorldPoint(3069, 2814, 0),
+            new WorldPoint(3076, 2825, 0),
+            new WorldPoint(3078, 2863, 0),
+            new WorldPoint(3082, 2873, 0),
+            new WorldPoint(3073, 2875, 0),
+            new WorldPoint(3060, 2882, 0),
+            new WorldPoint(3060, 2906, 0),
+            new WorldPoint(3040, 2921, 0),
+            new WorldPoint(3027, 2913, 0),
             new WorldPoint(3013, 2910, 0),
-            new WorldPoint(2995, 2896, 0),
-            new WorldPoint(2978, 2866, 0),
-            new WorldPoint(2981, 2848, 0),
-            new WorldPoint(2978, 2828, 0),
-            new WorldPoint(2987, 2818, 0),
-            new WorldPoint(2990, 2808, 0),
-            new WorldPoint(3001, 2787, 0),
-            new WorldPoint(3012, 2768, 0),
-            new WorldPoint(3020, 2762, 0),
-            new WorldPoint(3037, 2760, 0),
-            new WorldPoint(3054, 2762, 0),
-            new WorldPoint(3077, 2776, 0), // 32
-            new WorldPoint(3082, 2801, 0),
+            new WorldPoint(2994, 2896, 0),
+            new WorldPoint(2994, 2882, 0),
+            new WorldPoint(2977, 2865, 0),
+            new WorldPoint(2982, 2847, 0),
+            new WorldPoint(2979, 2830, 0),
+            new WorldPoint(2991, 2806, 0),
+            new WorldPoint(3014, 2763, 0),
+            new WorldPoint(3038, 2758, 0),
+            new WorldPoint(3054, 2761, 0),
+            new WorldPoint(3066, 2768, 0),
+            new WorldPoint(3075, 2776, 0),
+            new WorldPoint(3084, 2801, 0),
             new WorldPoint(3081, 2813, 0),
-            new WorldPoint(3093, 2825, 0),
-            new WorldPoint(3093, 2835, 0),
-            new WorldPoint(3094, 2862, 0),
-            new WorldPoint(3099, 2875, 0),
+            new WorldPoint(3094, 2828, 0),
+            new WorldPoint(3093, 2843, 0),
+            new WorldPoint(3093, 2864, 0),
+            new WorldPoint(3100, 2872, 0),
+            new WorldPoint(3092, 2884, 0),
             new WorldPoint(3073, 2916, 0),
-            new WorldPoint(3053, 2920, 0),
-            new WorldPoint(3013, 2910, 0),
-            new WorldPoint(2981, 2884, 0),
-            new WorldPoint(2963, 2882, 0),
-            new WorldPoint(2959, 2870, 0),
-            new WorldPoint(2968, 2862, 0),
-            new WorldPoint(2960, 2842, 0),
-            new WorldPoint(2955, 2831, 0),
-            new WorldPoint(2953, 2809, 0),
-            new WorldPoint(2967, 2794, 0),
-            new WorldPoint(2984, 2787, 0),
-            new WorldPoint(2988, 2777, 0),
-            new WorldPoint(3020, 2762, 0),
-            new WorldPoint(3037, 2758, 0),
-            new WorldPoint(3088, 2766, 0),
-            new WorldPoint(3097, 2774, 0),
-            new WorldPoint(3109, 2825, 0),
-            new WorldPoint(3120, 2866, 0),
-            new WorldPoint(3105, 2876, 0),
+            new WorldPoint(3053, 2921, 0),
+            new WorldPoint(3035, 2922, 0),
+            new WorldPoint(3012, 2910, 0),
+            new WorldPoint(2993, 2895, 0),
+            new WorldPoint(2979, 2883, 0),
+            new WorldPoint(2962, 2882, 0),
+            new WorldPoint(2956, 2872, 0),
+            new WorldPoint(2965, 2865, 0),
+            new WorldPoint(2966, 2851, 0),
+            new WorldPoint(2958, 2840, 0),
+            new WorldPoint(2953, 2810, 0),
+            new WorldPoint(2968, 2794, 0),
+            new WorldPoint(2983, 2787, 0),
+            new WorldPoint(2987, 2777, 0),
+            new WorldPoint(3004, 2768, 0),
+            new WorldPoint(3022, 2762, 0),
+            new WorldPoint(3039, 2758, 0),
+            new WorldPoint(3056, 2761, 0),
+            new WorldPoint(3068, 2766, 0),
+            new WorldPoint(3090, 2764, 0),
+            new WorldPoint(3098, 2774, 0),
+            new WorldPoint(3103, 2797, 0),
+            new WorldPoint(3110, 2825, 0),
+            new WorldPoint(3118, 2836, 0),
+            new WorldPoint(3117, 2850, 0),
+            new WorldPoint(3121, 2864, 0),
+            new WorldPoint(3103, 2878, 0),
             new WorldPoint(3082, 2900, 0),
-            new WorldPoint(3072, 2915, 0),
+            new WorldPoint(3072, 2917, 0),
             new WorldPoint(3059, 2921, 0),
-            new WorldPoint(3037, 2926, 0),
-            new WorldPoint(3034, 2918, 0) // return to start
+
+            new WorldPoint(3035, 2922, 0) // end
     );
 
     private static final List<WorldPoint> JubblySwordfishBestLine = List.of(
@@ -361,7 +441,7 @@ public class BearracudaTrialsPlugin extends Plugin {
             /*59*/new WorldPoint(2335, 2954, 0),
             /*60*/new WorldPoint(2345, 2931, 0),
             /*61*/new WorldPoint(2365, 2928, 0),
-            /*62*/new WorldPoint(2378, 2940, 0),
+            /*62*/new WorldPoint(2378, 2942, 0),
             /*63*/new WorldPoint(2395, 2939, 0),
             /*64*/new WorldPoint(2400, 2927, 0),
             /*65*/new WorldPoint(2417, 2924, 0),
@@ -423,6 +503,7 @@ public class BearracudaTrialsPlugin extends Plugin {
     @Getter(AccessLevel.PACKAGE)
     private static final List<TrialRoute> AllTrialRoutes = List.of(
             new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Swordfish, TemporTantrumSwordfishBestLine),
+            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Shark, TemporTantrumSharkBestLine),
             new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Marlin, TemporTantrumMarlinBestLine),
             new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Swordfish, JubblySwordfishBestLine, JubblySwordfishToadOrder, Collections.emptyList()),
             new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Shark, JubblySharkBestLine, JubblySharkToadOrder, Collections.emptyList()),
@@ -736,12 +817,12 @@ public class BearracudaTrialsPlugin extends Plugin {
     @Subscribe
     public void onChatMessage(ChatMessage e) {
         if (e.getType() != ChatMessageType.GAMEMESSAGE && e.getType() != ChatMessageType.SPAM) {
-            log.info("[CHAT-IGNORED] {}", e.getMessage());
+            //log.info("[CHAT-IGNORED] {}", e.getMessage());
             return;
         }
 
         String msg = e.getMessage().toLowerCase();
-        log.info("[CHAT] {}", msg);
+        //log.info("[CHAT] {}", msg);
         if (msg == null || msg.isEmpty()) {
             return;
         }
@@ -819,6 +900,8 @@ public class BearracudaTrialsPlugin extends Plugin {
      * Move any menu entries whose option starts with "Start-previous" to the
      * end of the list while preserving relative order.
      */
+    private List<String> FirstMenuEntries = List.of("start-previous");
+
     private MenuEntry[] swapMenuEntries(MenuEntry[] entries) {
         if (entries == null || entries.length == 0) {
             return entries;
@@ -835,14 +918,13 @@ public class BearracudaTrialsPlugin extends Plugin {
             if (opt == null) {
                 continue;
             }
-            if (opt.toLowerCase().startsWith("start-previous")) {
+            if (FirstMenuEntries.stream().anyMatch(x -> opt.toLowerCase().contains(x))) {
                 toMove.add(menuEntry);
                 it.remove();
             }
         }
         if (!toMove.isEmpty()) {
             entriesAsList.addAll(toMove);
-            log.info("Moved {} 'Start-previous' menu entries to end.", toMove.size());
         }
         entries = entriesAsList.toArray(new MenuEntry[0]);
         return entries;

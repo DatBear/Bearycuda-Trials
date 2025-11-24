@@ -209,7 +209,8 @@ public class BearracudaTrialsOverlay extends Overlay {
         }
 
         for (var toadGameObject : toadGameObjects) {
-            modelOutlineRenderer.drawOutline(toadGameObject, 2, Color.MAGENTA, 2);
+            var color = toadGameObject.getWorldLocation().distanceTo(player) < 15.2 ? GREEN : RED;
+            modelOutlineRenderer.drawOutline(toadGameObject, 4, color, 2);
         }
     }
 
@@ -272,7 +273,7 @@ public class BearracudaTrialsOverlay extends Overlay {
         }
 
         var sail = plugin.getSailGameObject();
-        if (sail == null) {
+        if (sail == null || sail.getWorldView() == null) {
             return;
         }
         var hull = sail.getConvexHull();

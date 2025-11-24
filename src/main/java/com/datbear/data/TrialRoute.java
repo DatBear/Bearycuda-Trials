@@ -1,5 +1,6 @@
 package com.datbear.data;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,7 +17,8 @@ public class TrialRoute {
         Location = location;
         Rank = rank;
         Points = points;
-        ToadOrder = null;
+        ToadOrder = Collections.emptyList();
+        WindMoteIndices = Collections.emptyList();
     }
 
     public TrialRoute(TrialLocations location, TrialRanks rank, List<WorldPoint> points, List<ToadFlagColors> toadOrder, List<Integer> windMoteIndices) {
