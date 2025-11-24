@@ -39,6 +39,12 @@ public class TrialInfo {
         var rankSprite = client.getWidget(SailingBtHud.BT_RANK_GFX).getSpriteId();
         info.Rank = parseRank(rankSprite);
 
+        var currentTimeSecondsString = client.getWidget(SailingBtHud.BT_CURRENT_TIME).getText();
+        info.CurrentTimeSeconds = parseTimeSeconds(currentTimeSecondsString);
+
+        var goalTimeSecondsString = client.getWidget(SailingBtHud.BT_RANK_TIME).getText();
+        info.GoalTimeSeconds = parseTimeSeconds(goalTimeSecondsString);
+
         var primaryObjectiveText = client.getWidget(SailingBtHud.BT_TRACKER_PROGRESS).getText();
         var crateText = client.getWidget(SailingBtHud.BT_OPTIONAL_PROGRESS).getText();
 
@@ -63,6 +69,21 @@ public class TrialInfo {
     @Override
     public String toString() {
         return String.format("Location=%s, Rank=%s, PrimaryObjectives=%d/%d, Crates=%d/%d, HasRum=%b, HasFrogs=%b", Location.toString(), Rank.toString(), CollectedPrimaryObjectives, TotalPrimaryObjectivesNeeded, CollectedCrates, TotalCratesNeeded, HasRum, HasToads);
+    }
+
+    private static int parseTimeSeconds(String timeText) {
+        if (Strings.isNullOrEmpty(timeText)) {
+            return 0;
+        }
+
+        var pattern = Pattern.compile("(\\d+):(\\d+)");
+        var matcher = pattern.matcher(timeText);
+        if (matcher.find() && matcher.groupCount() == 2) {
+            var minutes = Integer.parseInt(matcher.group(1));
+            var seconds = Integer.parseInt(matcher.group(2));
+            return minutes * 60 + seconds;
+        }
+        return 0;
     }
 
     private static boolean HasToads(TrialLocations location, int spriteId) {
@@ -121,7 +142,7 @@ public class TrialInfo {
             case 7028:
                 return TrialRanks.Shark;
             case 7029:
-                return TrialRanks.Marlin;// todo check
+                return TrialRanks.Marlin;
         }
         return TrialRanks.Unknown;
     }
@@ -132,6 +153,8 @@ public class TrialInfo {
         }
 
         switch (text) {
+            case "Gwenith Glide":
+                return TrialLocations.GwenithGlide;
             case "Jubbly Jive":
                 return TrialLocations.JubblyJive;
             case "Tempor Tantrum":

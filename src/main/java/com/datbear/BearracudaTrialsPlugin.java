@@ -77,17 +77,20 @@ public class BearracudaTrialsPlugin extends Plugin {
     }
 
     private final Set<Integer> TRIAL_CRATE_ANIMS = Set.of(8867);
-    private final Set<Integer> SPEED_BOOST_ANIMS = Set.of(13159, 13160);
+    private final Set<Integer> SPEED_BOOST_ANIMS = Set.of(13159, 13160, 13163);
 
     private final String TRIM_AVAILABLE_TEXT = "you feel a gust of wind.";
     private final String TRIM_SUCCESS_TEXT = "you trim the sails";
     private final String TRIM_FAIL_TEXT = "the wind dies down";
 
     private final String MENU_OPTION_START_PREVIOUS_RANK = "start-previous";
+    private final String MENU_OPTION_QUICK_RESET = "quick-reset";
+    private final String MENU_OPTION_STOP_NAVIGATING = "stop-navigating";
 
     private static final int VISIT_TOLERANCE = 10;
 
     private List<String> FirstMenuEntries = new ArrayList<String>();
+    private List<String> RemoveMenuEntriesDuringTrial = new ArrayList<String>();
 
     @Getter(AccessLevel.PACKAGE)
     private TrialInfo currentTrial = null;
@@ -100,6 +103,10 @@ public class BearracudaTrialsPlugin extends Plugin {
 
     @Getter(AccessLevel.PACKAGE)
     private int toadsThrown = 0;
+
+    // Number of consecutive game ticks where TrialInfo.getCurrent(client) returned null
+    // Used to allow a grace period before clearing currentTrial during transient nulls
+    private int nullTrialConsecutiveTicks = 0;
 
     private final Set<Integer> BOAT_WORLD_ENTITY_IDS = Set.of(12);
 
@@ -127,6 +134,15 @@ public class BearracudaTrialsPlugin extends Plugin {
         if (config.enableStartPreviousRankLeftClick()) {
             FirstMenuEntries.add(MENU_OPTION_START_PREVIOUS_RANK);
         }
+        if (config.enableQuickResetLeftClick()) {
+            FirstMenuEntries.add(MENU_OPTION_QUICK_RESET);
+        }
+        if (config.disableStopNavigating()) {
+            RemoveMenuEntriesDuringTrial.add(MENU_OPTION_STOP_NAVIGATING);
+        }
+        if (config.showGwenithGlideRoutes()) {
+            TrialRoute.AddGwenithGlideRoutes();
+        }
     }
 
     @Override
@@ -146,20 +162,32 @@ public class BearracudaTrialsPlugin extends Plugin {
         if (client == null || client.getLocalPlayer() == null) {
             return;
         }
-        TrialRoute prevActiveRoute = getActiveTrialRoute();
         TrialInfo newTrialInfo = TrialInfo.getCurrent(client);
+
+        // Allow a grace period of 18 game ticks where TrialInfo may be null (e.g., region/load transitions) before clearing currentTrial.
+        // We only apply the null after 18 consecutive null ticks.
         if (newTrialInfo != null) {
-            TrialRoute newActiveRoute = getActiveTrialRoute();
-            if (prevActiveRoute != newActiveRoute) {
+            // If trial info reappears, clear any null-grace countdown
+            nullTrialConsecutiveTicks = 0;
+
+            // If the trial changed (location/rank/reset time), reset route state
+            if (currentTrial == null || currentTrial.Location != newTrialInfo.Location || currentTrial.Rank != newTrialInfo.Rank || newTrialInfo.CurrentTimeSeconds < currentTrial.CurrentTimeSeconds) {
                 resetRouteData();
-                //log.info("Active route changed; resetting lastVisitedIndex (prev={}, new={})", prevActiveRoute == null ? "null" : prevActiveRoute.Rank, newActiveRoute == null ? "null" : newActiveRoute.Rank);
             }
+
             updateToadsThrown(newTrialInfo);
-        } else if (currentTrial != null) {
-            //log.info("No active trial detected - resetting lastVisitedIndex.");
-            resetRouteData();
+            currentTrial = newTrialInfo;
+        } else {
+            if (currentTrial != null) {
+                nullTrialConsecutiveTicks += 1;
+                if (nullTrialConsecutiveTicks >= 18) {
+                    resetRouteData();
+                    currentTrial = null;
+                }
+            } else {
+                nullTrialConsecutiveTicks = 0;
+            }
         }
-        currentTrial = newTrialInfo;
 
         final var player = client.getLocalPlayer();
         var playerPoint = BoatLocation.fromLocal(client, player.getLocalLocation());
@@ -326,15 +354,39 @@ public class BearracudaTrialsPlugin extends Plugin {
             return;
         }
 
-        if (event.getKey().equals("enableStartPreviousRankLeftClick")) {
-            if (config.enableStartPreviousRankLeftClick()) {
-                if (FirstMenuEntries.stream().noneMatch(x -> x.equals(MENU_OPTION_START_PREVIOUS_RANK))) {
-                    FirstMenuEntries.add(MENU_OPTION_START_PREVIOUS_RANK);
-                }
-            } else {
-                if (FirstMenuEntries.stream().anyMatch(x -> x.equals(MENU_OPTION_START_PREVIOUS_RANK))) {
-                    FirstMenuEntries.remove(MENU_OPTION_START_PREVIOUS_RANK);
-                }
+        if (config.showGwenithGlideRoutes() && TrialRoute.AllTrialRoutes.stream().noneMatch(x -> x.Location == TrialLocations.GwenithGlide)) {
+            TrialRoute.AddGwenithGlideRoutes();
+        } else if (!config.showGwenithGlideRoutes()) {
+            TrialRoute.AllTrialRoutes.removeIf(x -> x.Location == TrialLocations.GwenithGlide);
+        }
+
+        if (config.enableStartPreviousRankLeftClick()) {
+            if (FirstMenuEntries.stream().noneMatch(x -> x.equals(MENU_OPTION_START_PREVIOUS_RANK))) {
+                FirstMenuEntries.add(MENU_OPTION_START_PREVIOUS_RANK);
+            }
+        } else {
+            if (FirstMenuEntries.stream().anyMatch(x -> x.equals(MENU_OPTION_START_PREVIOUS_RANK))) {
+                FirstMenuEntries.remove(MENU_OPTION_START_PREVIOUS_RANK);
+            }
+        }
+
+        if (config.enableQuickResetLeftClick()) {
+            if (FirstMenuEntries.stream().noneMatch(x -> x.equals(MENU_OPTION_QUICK_RESET))) {
+                FirstMenuEntries.add(MENU_OPTION_QUICK_RESET);
+            }
+        } else {
+            if (FirstMenuEntries.stream().anyMatch(x -> x.equals(MENU_OPTION_QUICK_RESET))) {
+                FirstMenuEntries.remove(MENU_OPTION_QUICK_RESET);
+            }
+        }
+
+        if (config.disableStopNavigating()) {
+            if (RemoveMenuEntriesDuringTrial.stream().noneMatch(x -> x.equals(MENU_OPTION_STOP_NAVIGATING))) {
+                RemoveMenuEntriesDuringTrial.add(MENU_OPTION_STOP_NAVIGATING);
+            }
+        } else {
+            if (RemoveMenuEntriesDuringTrial.stream().anyMatch(x -> x.equals(MENU_OPTION_STOP_NAVIGATING))) {
+                RemoveMenuEntriesDuringTrial.remove(MENU_OPTION_STOP_NAVIGATING);
             }
         }
     }
@@ -367,7 +419,41 @@ public class BearracudaTrialsPlugin extends Plugin {
         var entries = swapMenuEntries(client.getMenuEntries());
         entries = addDebugMenuEntries(entries);
 
+        if (currentTrial != null && !RemoveMenuEntriesDuringTrial.isEmpty()) {
+            entries = removeMenuEntries(entries, RemoveMenuEntriesDuringTrial);
+        }
+
         client.setMenuEntries(entries);
+    }
+
+    private MenuEntry[] removeMenuEntries(MenuEntry[] entries, Collection<String> toRemove) {
+        if (entries == null || entries.length == 0 || toRemove == null || toRemove.isEmpty()) {
+            return entries;
+        }
+        var walkHereEntry = Arrays.stream(entries).filter(x -> x != null && x.getOption().toLowerCase().equals("walk here")).findFirst().orElse(null);
+        var entryList = new ArrayList<MenuEntry>(Arrays.asList(entries));
+        var it = entryList.iterator();
+        while (it.hasNext()) {
+            var menuEntry = it.next();
+            if (menuEntry == null) {
+                continue;
+            }
+            var opt = menuEntry.getOption();
+            if (opt == null) {
+                continue;
+            }
+            if (toRemove.stream().anyMatch(x -> opt.toLowerCase().contains(x))) {
+                if (walkHereEntry != null) {
+                    var walkIdx = entryList.indexOf(walkHereEntry);
+                    var currIdx = entryList.indexOf(menuEntry);
+                    entryList.set(walkIdx, menuEntry);
+                    entryList.set(currIdx, walkHereEntry);
+                } else {
+                    it.remove();
+                }
+            }
+        }
+        return entryList.toArray(new MenuEntry[0]);
     }
 
     private MenuEntry[] addDebugMenuEntries(MenuEntry[] entries) {
@@ -464,7 +550,7 @@ public class BearracudaTrialsPlugin extends Plugin {
         if (route == null || route.Points == null || route.Points.isEmpty() || limit <= 0) {
             return Collections.emptyList();
         }
-        int start = lastVisitedIndex;
+        int start = Math.max(0, lastVisitedIndex);
         if (start >= route.Points.size()) {
             return Collections.emptyList();
         }
@@ -476,7 +562,7 @@ public class BearracudaTrialsPlugin extends Plugin {
     }
 
     public List<WorldPoint> getVisibleLineForRoute(final WorldPoint player, final TrialRoute route, final int limit) {
-        if (player == null || route == null) {
+        if (player == null || route == null || lastVisitedIndex == -1) {
             return Collections.emptyList();
         }
 

@@ -1,5 +1,6 @@
 package com.datbear.data;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -437,11 +438,164 @@ public class TrialRoute {
 
     private static final List<Integer> JubblyMarlinWindMoteIndices = List.of(13, 55, 71, 89, 90);
 
-    public static final List<TrialRoute> AllTrialRoutes = List.of(
-            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Swordfish, TemporTantrumSwordfishBestLine),
-            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Shark, TemporTantrumSharkBestLine),
-            new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Marlin, TemporTantrumMarlinBestLine),
-            new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Swordfish, JubblySwordfishBestLine, JubblySwordfishToadOrder, Collections.emptyList()),
-            new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Shark, JubblySharkBestLine, JubblySharkToadOrder, Collections.emptyList()),
-            new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Marlin, JubblyMarlinBestLine, JubblyMarlinToadOrder, JubblyMarlinWindMoteIndices));
+    private static final List<WorldPoint> GwenithGlideSwordfishBestLine = List.of(
+            new WorldPoint(2257, 3459, 0),
+            new WorldPoint(2255, 3469, 0),
+            new WorldPoint(2260, 3474, 0),
+            new WorldPoint(2271, 3477, 0),
+            new WorldPoint(2274, 3487, 0),
+            new WorldPoint(2260, 3494, 0), //white portal
+            new WorldPoint(2093, 3233, 0), //after portal
+            new WorldPoint(2103, 3230, 0),
+            new WorldPoint(2111, 3234, 0),
+            new WorldPoint(2118, 3231, 0),
+            new WorldPoint(2128, 3233, 0),
+            new WorldPoint(2130, 3253, 0),
+            new WorldPoint(2133, 3263, 0),
+            new WorldPoint(2127, 3275, 0),
+            new WorldPoint(2121, 3278, 0),
+            new WorldPoint(2121, 3289, 0),
+            new WorldPoint(2131, 3297, 0),
+            new WorldPoint(2148, 3297, 0),
+            new WorldPoint(2157, 3293, 0), //white portal
+            new WorldPoint(2260, 3509, 0),
+            new WorldPoint(2266, 3518, 0),
+            new WorldPoint(2263, 3531, 0),
+            new WorldPoint(2250, 3542, 0),
+            new WorldPoint(2252, 3558, 0),
+            new WorldPoint(2254, 3571, 0),
+            new WorldPoint(2242, 3574, 0), //blue portal
+            new WorldPoint(2088, 3215, 0),
+            new WorldPoint(2110, 3214, 0),
+            new WorldPoint(2115, 3206, 0),
+            new WorldPoint(2132, 3193, 0),
+            new WorldPoint(2141, 3220, 0),
+            new WorldPoint(2139, 3230, 0),
+            new WorldPoint(2141, 3243, 0),
+            new WorldPoint(2153, 3246, 0), //blue portal
+            new WorldPoint(2203, 3574, 0),
+            new WorldPoint(2191, 3567, 0),
+            new WorldPoint(2194, 3547, 0),
+            new WorldPoint(2201, 3535, 0),
+            new WorldPoint(2198, 3514, 0), //green portal
+            new WorldPoint(2105, 3140, 0),
+            new WorldPoint(2092, 3145, 0),
+            new WorldPoint(2078, 3158, 0),
+            new WorldPoint(2070, 3161, 0),
+            new WorldPoint(2069, 3175, 0),
+            new WorldPoint(2058, 3185, 0),
+            new WorldPoint(2073, 3210, 0),
+            new WorldPoint(2100, 3205, 0),
+            new WorldPoint(2128, 3172, 0)//end
+    );
+
+    private static final List<WorldPoint> GwenithGlideSharkBestLine = List.of(
+            new WorldPoint(2257, 3459, 0),
+            new WorldPoint(2255, 3469, 0),
+            new WorldPoint(2260, 3474, 0),
+            new WorldPoint(2271, 3477, 0),
+            new WorldPoint(2274, 3487, 0),
+            new WorldPoint(2260, 3494, 0), //white portal
+            new WorldPoint(2093, 3233, 0), //after portal
+            new WorldPoint(2103, 3230, 0),
+            new WorldPoint(2111, 3234, 0),
+            new WorldPoint(2118, 3231, 0),
+            new WorldPoint(2128, 3233, 0),
+            new WorldPoint(2130, 3253, 0),
+            new WorldPoint(2133, 3263, 0),
+            new WorldPoint(2127, 3275, 0),
+            new WorldPoint(2121, 3278, 0),
+            new WorldPoint(2121, 3289, 0),
+            new WorldPoint(2131, 3297, 0),
+            new WorldPoint(2148, 3297, 0),
+            new WorldPoint(2157, 3293, 0), //white portal
+            new WorldPoint(2260, 3509, 0),
+            new WorldPoint(2266, 3518, 0),
+            new WorldPoint(2263, 3531, 0),
+            new WorldPoint(2250, 3542, 0),
+            new WorldPoint(2252, 3558, 0),
+            new WorldPoint(2254, 3571, 0),
+            new WorldPoint(2242, 3574, 0), //blue portal
+            new WorldPoint(2088, 3215, 0),
+            new WorldPoint(2110, 3214, 0),
+            new WorldPoint(2115, 3206, 0),
+            new WorldPoint(2132, 3193, 0),
+            new WorldPoint(2141, 3220, 0),
+            new WorldPoint(2139, 3230, 0),
+            new WorldPoint(2141, 3243, 0),
+            new WorldPoint(2153, 3246, 0), //blue portal
+            new WorldPoint(2203, 3574, 0),
+            new WorldPoint(2191, 3567, 0),
+            new WorldPoint(2194, 3547, 0),
+            new WorldPoint(2201, 3535, 0),
+            new WorldPoint(2198, 3514, 0), //green portal
+            new WorldPoint(2105, 3140, 0),
+            new WorldPoint(2092, 3145, 0),
+            new WorldPoint(2078, 3158, 0),
+            new WorldPoint(2070, 3161, 0),
+            new WorldPoint(2069, 3175, 0),
+            new WorldPoint(2058, 3185, 0),
+            new WorldPoint(2073, 3210, 0),
+            new WorldPoint(2100, 3205, 0),
+            new WorldPoint(2128, 3172, 0), //green portal, end swordfish
+            new WorldPoint(2198, 3497, 0),
+            new WorldPoint(2192, 3480, 0),
+            new WorldPoint(2177, 3474, 0),
+            new WorldPoint(2171, 3465, 0),
+            new WorldPoint(2158, 3464, 0), //yellow portal
+            new WorldPoint(2115, 3373, 0),
+            new WorldPoint(2100, 3372, 0),
+            new WorldPoint(2087, 3377, 0),
+            new WorldPoint(2079, 3389, 0),
+            new WorldPoint(2094, 3397, 0),
+            new WorldPoint(2104, 3406, 0),
+            new WorldPoint(2085, 3413, 0),
+            new WorldPoint(2078, 3423, 0),
+            new WorldPoint(2098, 3437, 0),
+            new WorldPoint(2116, 3439, 0), //yellow portal
+            new WorldPoint(2143, 3464, 0),
+            new WorldPoint(2110, 3464, 0),
+            new WorldPoint(2105, 3481, 0),
+            new WorldPoint(2106, 3493, 0),
+            new WorldPoint(2125, 3495, 0),
+            new WorldPoint(2135, 3480, 0), //secret crate!
+            new WorldPoint(2151, 3490, 0),
+            new WorldPoint(2149, 3503, 0),
+            new WorldPoint(2160, 3508, 0), //red portal
+            new WorldPoint(2248, 3634, 0),
+            new WorldPoint(2240, 3628, 0),
+            new WorldPoint(2231, 3617, 0),
+            new WorldPoint(2229, 3608, 0),
+            new WorldPoint(2229, 3599, 0),
+            new WorldPoint(2216, 3593, 0),
+            new WorldPoint(2190, 3597, 0),
+            new WorldPoint(2167, 3589, 0),
+            new WorldPoint(2141, 3597, 0),
+            new WorldPoint(2123, 3598, 0),
+            new WorldPoint(2100, 3583, 0),
+            new WorldPoint(2100, 3583, 0),
+            new WorldPoint(2104, 3574, 0),
+
+            new WorldPoint(0, 0, 0)//end swordfish
+    );
+
+    private static final List<WorldPoint> GwenithGlideMarlinBestLine = List.of(
+            new WorldPoint(2257, 3459, 0),
+            new WorldPoint(2257, 3459, 0)//end
+    );
+
+    public static final List<TrialRoute> AllTrialRoutes = new ArrayList<TrialRoute>(
+            List.of(
+                    new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Swordfish, TemporTantrumSwordfishBestLine),
+                    new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Shark, TemporTantrumSharkBestLine),
+                    new TrialRoute(TrialLocations.TemporTantrum, TrialRanks.Marlin, TemporTantrumMarlinBestLine),
+                    new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Swordfish, JubblySwordfishBestLine, JubblySwordfishToadOrder, Collections.emptyList()),
+                    new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Shark, JubblySharkBestLine, JubblySharkToadOrder, Collections.emptyList()),
+                    new TrialRoute(TrialLocations.JubblyJive, TrialRanks.Marlin, JubblyMarlinBestLine, JubblyMarlinToadOrder, JubblyMarlinWindMoteIndices)));
+
+    public static final void AddGwenithGlideRoutes() {
+        AllTrialRoutes.add(new TrialRoute(TrialLocations.GwenithGlide, TrialRanks.Swordfish, GwenithGlideSwordfishBestLine));
+        AllTrialRoutes.add(new TrialRoute(TrialLocations.GwenithGlide, TrialRanks.Shark, GwenithGlideSharkBestLine));
+        AllTrialRoutes.add(new TrialRoute(TrialLocations.GwenithGlide, TrialRanks.Marlin, GwenithGlideMarlinBestLine));
+    }
 }

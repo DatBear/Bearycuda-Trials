@@ -87,7 +87,21 @@ public interface BearracudaTrialsConfig extends Config {
         return new Color(255, 0, 0, 150);
     }
 
-    @Alpha
+    @ConfigItem(keyName = "enableStartPreviousRankLeftClick", name = "Enable 'Start-previous-rank' left-click", description = "When enabled, this will swap the left-click action on trial npcs to Start-previous-rank", section = menuSwaps, position = 1)
+    default boolean enableStartPreviousRankLeftClick() {
+        return true;
+    }
+
+    @ConfigItem(keyName = "enableQuickResetLeftClick", name = "Enable 'Quick-reset' left-click", description = "When enabled, this will swap the left-click action on the reset button in the HUD to Quick-reset", section = menuSwaps, position = 2)
+    default boolean enableQuickResetLeftClick() {
+        return true;
+    }
+
+    @ConfigItem(keyName = "disableStopNavigating", name = "Disable 'Stop-navigating' left-click during trials", description = "When enabled, this will remove the left-click 'Stop-navigating' action on the helm while in a trial", section = menuSwaps, position = 3)
+    default boolean disableStopNavigating() {
+        return true;
+    }
+
     @ConfigItem(keyName = "showDebugOverlay", name = "Show debug overlay", description = "Show debugging info (player/instance coords & next waypoint indices)", section = debug, position = 1)
     default boolean showDebugOverlay() {
         return false;
@@ -98,8 +112,8 @@ public interface BearracudaTrialsConfig extends Config {
         return false;
     }
 
-    @ConfigItem(keyName = "enableStartPreviousRankLeftClick", name = "Enable 'Start-previous-rank' left-click", description = "When enabled, this will swap the left-click action on trial npcs to Start-previous-rank", section = menuSwaps, position = 1)
-    default boolean enableStartPreviousRankLeftClick() {
+    @ConfigItem(keyName = "showGwenithGlideRoutes", name = "Show Gwenith Glide routes (INCOMPLETE)", description = "Toggle display of Gwenith Glide routes", section = debug, position = 3)
+    default boolean showGwenithGlideRoutes() {
         return false;
     }
 
