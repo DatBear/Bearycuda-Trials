@@ -15,13 +15,14 @@ import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 
 import javax.inject.Inject;
 
+import com.datbear.data.Directions;
 import com.datbear.data.TrialRoute;
 import com.datbear.overlay.WorldLines;
 import com.datbear.overlay.WorldPerspective;
 
 import java.awt.*;
 
-public class BearracudaTrialsOverlay extends Overlay {
+public class BearycudaTrialsOverlay extends Overlay {
     // Retain legacy constants (unused after config wiring) in case future fallback logic needed.
 
     @Inject
@@ -34,15 +35,15 @@ public class BearracudaTrialsOverlay extends Overlay {
     private ModelOutlineRenderer modelOutlineRenderer;
 
     private Client client;
-    private BearracudaTrialsPlugin plugin;
-    private BearracudaTrialsConfig config;
+    private BearycudaTrialsPlugin plugin;
+    private BearycudaTrialsConfig config;
 
     private final int MOTE_SPRITE_ID = 7075;
     private int nextMoteIndex = -1;
 
     @Inject
-    public BearracudaTrialsOverlay(Client client, BearracudaTrialsPlugin plugin,
-            BearracudaTrialsConfig config) {
+    public BearycudaTrialsOverlay(Client client, BearycudaTrialsPlugin plugin,
+            BearycudaTrialsConfig config) {
         super();
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.UNDER_WIDGETS);
@@ -64,6 +65,8 @@ public class BearracudaTrialsOverlay extends Overlay {
         if (playerLoc == null)
             return null;
 
+        //renderCameraCenterDirection(graphics, Color.MAGENTA, 2, 40, Directions.SouthEast);
+
         renderLastMenuCanvasWorldPointOutline(graphics);
         highlightTrimmableSails(graphics);
 
@@ -77,6 +80,7 @@ public class BearracudaTrialsOverlay extends Overlay {
 
         var boatLoc = BoatLocation.fromLocal(client, player.getLocalLocation());
 
+        renderPortalArrows(graphics, route);
         highlightToadFlags(graphics, boatLoc);
         highlightCrates(graphics);
         highlightBoosts(graphics);
@@ -133,6 +137,127 @@ public class BearracudaTrialsOverlay extends Overlay {
         graphics.setColor(Color.BLACK);
         graphics.setFont(graphics.getFont().deriveFont(Font.BOLD, 12f));
         graphics.drawString(label, start.getX() + (size / 2) + 2, start.getY() - (size / 2) - 2);
+    }
+
+    public void renderCameraCenterDirection(Graphics2D graphics, Color color, int diameter, int arrowLength, Directions direction) {
+        if (graphics == null) {
+            return;
+        }
+        if (color == null) {
+            color = Color.WHITE;
+        }
+        if (diameter <= 0) {
+            diameter = 8;
+        }
+        if (arrowLength <= 0) {
+            arrowLength = 40;
+        }
+
+        int viewportXOffset = client.getViewportXOffset();
+        int viewportYOffset = client.getViewportYOffset();
+        int viewportWidth = client.getViewportWidth();
+        int viewportHeight = client.getViewportHeight();
+
+        if (viewportWidth <= 0 || viewportHeight <= 0) {
+            return;
+        }
+
+        int centerX = viewportXOffset + viewportWidth / 2;
+        int centerY = viewportYOffset + viewportHeight / 2;
+
+        double dx;
+        double dy;
+        if (direction != null) {
+            final double invSqrt2 = 1.0 / Math.sqrt(2.0);
+            double wx; // world X (east +)
+            double wy; // world Y (north +)
+            switch (direction) {
+                case North:
+                    wx = 0;
+                    wy = 1;
+                    break;
+                case NorthEast:
+                    wx = 1;
+                    wy = 1;
+                    break;
+                case East:
+                    wx = 1;
+                    wy = 0;
+                    break;
+                case SouthEast:
+                    wx = 1;
+                    wy = -1;
+                    break;
+                case South:
+                    wx = 0;
+                    wy = -1;
+                    break;
+                case SouthWest:
+                    wx = -1;
+                    wy = -1;
+                    break;
+                case West:
+                    wx = -1;
+                    wy = 0;
+                    break;
+                case NorthWest:
+                    wx = -1;
+                    wy = 1;
+                    break;
+                default:
+                    wx = 0;
+                    wy = -1;
+                    break; // default south
+            }
+            if (Math.abs(wx) == 1 && Math.abs(wy) == 1) {
+                wx *= invSqrt2;
+                wy *= invSqrt2;
+            }
+            int yaw = client.getCameraYaw() & 2047;
+            double yawRad = yaw * (Math.PI / 1024.0);
+            double baseAngle = Math.atan2(wx, wy);
+            double total = yawRad + baseAngle;
+            dx = Math.sin(total);
+            dy = -Math.cos(total);
+        } else {
+            int yaw = client.getCameraYaw() & 2047;
+            double yawRad = yaw * (Math.PI / 1024.0);
+            dx = Math.sin(yawRad);
+            dy = -Math.cos(yawRad);
+        }
+
+        int endX = (int) Math.round(centerX + dx * arrowLength);
+        int endY = (int) Math.round(centerY + dy * arrowLength);
+
+        // Center dot
+        int dotX = centerX - diameter / 2;
+        int dotY = centerY - diameter / 2;
+        Color borderColor = new Color(0, 0, 0, Math.min(255, color.getAlpha()));
+        Stroke previous = graphics.getStroke();
+        graphics.setColor(color);
+        graphics.fillOval(dotX, dotY, diameter, diameter);
+        graphics.setColor(borderColor);
+        graphics.setStroke(new BasicStroke(2f));
+        graphics.drawOval(dotX, dotY, diameter, diameter);
+
+        // Direction line
+        graphics.setColor(color);
+        graphics.setStroke(new BasicStroke(3f));
+        graphics.drawLine(centerX, centerY, endX, endY);
+
+        // Arrowhead
+        double arrowAngle = Math.atan2(dy, dx);
+        int headSize = 6;
+        double left = arrowAngle + Math.toRadians(150);
+        double right = arrowAngle - Math.toRadians(150);
+        int leftX = (int) Math.round(endX + Math.cos(left) * headSize);
+        int leftY = (int) Math.round(endY + Math.sin(left) * headSize);
+        int rightX = (int) Math.round(endX + Math.cos(right) * headSize);
+        int rightY = (int) Math.round(endY + Math.sin(right) * headSize);
+        graphics.drawLine(endX, endY, leftX, leftY);
+        graphics.drawLine(endX, endY, rightX, rightY);
+
+        graphics.setStroke(previous);
     }
 
     private void renderDebugInfo(Graphics2D graphics, TrialRoute active) {
@@ -291,6 +416,19 @@ public class BearracudaTrialsOverlay extends Overlay {
             return;
         }
         OverlayUtil.renderPolygon(graphics, hull, config.trimSailHighlightColor());
+    }
+
+    private void renderPortalArrows(Graphics2D graphics, TrialRoute route) {
+        if (!config.showGwenithGlideRoutes()) {
+            return;
+        }
+        var portalDirection = plugin.getVisiblePortalDirection(route);
+        if (portalDirection == null) {
+            return;
+        }
+
+        renderCameraCenterDirection(graphics, config.routeLineColor(), 2, 50, portalDirection.FirstMovementDirection);
+        renderCameraCenterDirection(graphics, Color.GREEN, 2, 50, portalDirection.BoatDirection);
     }
 
 }

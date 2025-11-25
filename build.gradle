@@ -32,8 +32,8 @@ tasks.withType(JavaCompile) {
 
 tasks.register('runRuneLite', JavaExec) {
     group = 'run'
-    description = 'Run RuneLite client with BearracudaTrials plugin loaded and JDWP (port 5005) for debugging'
-    mainClass.set('com.datbear.BearracudaTrialsPluginTest')
+    description = 'Run RuneLite client with BearycudaTrials plugin loaded and JDWP (port 5005) for debugging'
+    mainClass.set('com.datbear.BearycudaTrialsPluginTest')
     classpath = sourceSets.test.runtimeClasspath
     jvmArgs '-ea', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005'
     systemProperties System.getProperties().findAll { k, _ -> k.startsWith('runelite.') }

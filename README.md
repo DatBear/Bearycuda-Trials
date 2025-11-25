@@ -1,4 +1,4 @@
-# Bearracuda Trials Plugin
+# Bearycuda Trials Plugin
 
 - Shows a route for each barracuda trial.
 - Highlights crates.

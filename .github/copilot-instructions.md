@@ -1,6 +1,6 @@
-## Bearracuda Trials Plugin Instructions
+## Bearycuda Trials Plugin Instructions
 
-- This plugin enhances the Bearracuda Trials minigame in Old School RuneScape by providing useful features such as highlighting trial crates, tracking cargo items, and managing obstacles.
+- This plugin enhances the Bearycuda Trials minigame in Old School RuneScape by providing useful features such as highlighting trial crates, tracking cargo items, and managing obstacles.
 
 ## Responses
 
@@ -17,4 +17,4 @@
 
 ## Code Location
 
-- The main plugin code is located in `src/main/java/com/datbear/BearracudaTrialsPlugin.java`.
+- The main plugin code is located in `src/main/java/com/datbear/BearycudaTrialsPlugin.java`.

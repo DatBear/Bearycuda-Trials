@@ -5,7 +5,7 @@
       "type": "java",
       "name": "Run RuneLite (Test Loader)",
       "request": "launch",
-      "mainClass": "com.datbear.BearracudaTrialsPluginTest",
+      "mainClass": "com.datbear.BearycudaTrialsPluginTest",
       "classPaths": [
         "${workspaceFolder}/build/classes/java/test",
         "${workspaceFolder}/build/resources/test",

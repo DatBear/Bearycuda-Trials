@@ -12,6 +12,7 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import com.datbear.data.AllSails;
+import com.datbear.data.PortalDirection;
 import com.datbear.data.ToadFlagGameObject;
 import com.datbear.data.TrialInfo;
 import com.datbear.data.TrialLocations;
@@ -50,10 +51,8 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
-@Slf4j @PluginDescriptor(name = "Bearracuda Trials", description = "Show info to help with barracuda trials", tags = {
-        "overlay", "sailing", "barracuda", "trials" //
-})
-public class BearracudaTrialsPlugin extends Plugin {
+@Slf4j @PluginDescriptor(name = "Bearycuda Trials", description = "Show info to help with barracuda trials", tags = { "overlay", "sailing", "barracuda", "trials" })
+public class BearycudaTrialsPlugin extends Plugin {
     @Inject
     private Client client;
 
@@ -63,17 +62,17 @@ public class BearracudaTrialsPlugin extends Plugin {
     private Notifier notifier;
 
     @Inject
-    private BearracudaTrialsConfig config;
+    private BearycudaTrialsConfig config;
 
     @Inject
-    private BearracudaTrialsOverlay overlay;
+    private BearycudaTrialsOverlay overlay;
 
     @Inject
-    private BearracudaTrialsPanel panel;
+    private BearycudaTrialsPanel panel;
 
     @Provides
-    BearracudaTrialsConfig provideConfig(ConfigManager configManager) {
-        return configManager.getConfig(BearracudaTrialsConfig.class);
+    BearycudaTrialsConfig provideConfig(ConfigManager configManager) {
+        return configManager.getConfig(BearycudaTrialsConfig.class);
     }
 
     private final Set<Integer> TRIAL_CRATE_ANIMS = Set.of(8867);
@@ -128,7 +127,7 @@ public class BearracudaTrialsPlugin extends Plugin {
 
     @Override
     protected void startUp() {
-        //log.info("Bearracuda Trials Plugin started!");
+        //log.info("Bearycuda Trials Plugin started!");
         overlayManager.add(overlay);
         overlayManager.add(panel);
         if (config.enableStartPreviousRankLeftClick()) {
@@ -150,7 +149,7 @@ public class BearracudaTrialsPlugin extends Plugin {
         overlayManager.remove(overlay);
         overlayManager.remove(panel);
         reset();
-        //log.info("BearracudaTrialsPlugin shutDown: panel removed and state reset.");
+        //log.info("BearycudaTrialsPlugin shutDown: panel removed and state reset.");
     }
 
     @Subscribe
@@ -350,7 +349,7 @@ public class BearracudaTrialsPlugin extends Plugin {
             return;
         }
         // Only react to our plugin's config group
-        if (!event.getGroup().equals("bearracudaTrials")) {
+        if (!event.getGroup().equals("bearycudaTrials")) {
             return;
         }
 
@@ -555,7 +554,14 @@ public class BearracudaTrialsPlugin extends Plugin {
             return Collections.emptyList();
         }
         List<Integer> out = new ArrayList<>(limit);
+        var nextPortal = route.PortalDirections.stream()
+                .filter(x -> x.Index >= lastVisitedIndex)
+                .min((a, b) -> Integer.compare(a.Index, b.Index))
+                .orElse(null);
         for (int i = start; i < route.Points.size() && out.size() < limit; i++) {
+            if (nextPortal != null && i > nextPortal.Index) {
+                break;
+            }
             out.add(i);
         }
         return out;
@@ -577,6 +583,15 @@ public class BearracudaTrialsPlugin extends Plugin {
             out.add(real);
         }
         return out;
+    }
+
+    public PortalDirection getVisiblePortalDirection(TrialRoute route) {
+        var portalDirection = route.PortalDirections.stream()
+                .filter(x -> x.Index - 1 == lastVisitedIndex || x.Index == lastVisitedIndex || x.Index + 1 == lastVisitedIndex)
+                .min((a, b) -> Integer.compare(a.Index, b.Index))
+                .orElse(null);
+
+        return portalDirection;
     }
 
     private MenuEntry[] swapMenuEntries(MenuEntry[] entries) {

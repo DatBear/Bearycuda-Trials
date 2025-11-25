@@ -4,8 +4,8 @@ import net.runelite.client.config.*;
 
 import java.awt.*;
 
-@ConfigGroup("bearracudaTrials")
-public interface BearracudaTrialsConfig extends Config {
+@ConfigGroup("bearycudaTrials")
+public interface BearycudaTrialsConfig extends Config {
 
     @ConfigSection(name = "Outlines/Colors", description = "All options relating to colors & outlines", position = 1, closedByDefault = false)
     String outlines = "outlines";

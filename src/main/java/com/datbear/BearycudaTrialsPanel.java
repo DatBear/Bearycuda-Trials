@@ -4,7 +4,6 @@ import net.runelite.api.Client;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.components.LineComponent;
 
 import javax.inject.Inject;
 import java.awt.*;
@@ -12,14 +11,14 @@ import java.awt.*;
 import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
 import static net.runelite.client.ui.overlay.OverlayManager.OPTION_CONFIGURE;
 
-public class BearracudaTrialsPanel extends OverlayPanel {
+public class BearycudaTrialsPanel extends OverlayPanel {
     private Client client;
-    private BearracudaTrialsPlugin plugin;
-    private BearracudaTrialsConfig config;
+    private BearycudaTrialsPlugin plugin;
+    private BearycudaTrialsConfig config;
 
     @Inject
-    public BearracudaTrialsPanel(Client client, BearracudaTrialsPlugin plugin,
-            BearracudaTrialsConfig config) {
+    public BearycudaTrialsPanel(Client client, BearycudaTrialsPlugin plugin,
+            BearycudaTrialsConfig config) {
         super(plugin);
         this.client = client;
         this.plugin = plugin;
@@ -29,7 +28,7 @@ public class BearracudaTrialsPanel extends OverlayPanel {
                 new OverlayMenuEntry(
                         RUNELITE_OVERLAY_CONFIG,
                         OPTION_CONFIGURE,
-                        "Bearracuda Trials Panel"));
+                        "Bearycuda Trials Panel"));
     }
 
     @Override
