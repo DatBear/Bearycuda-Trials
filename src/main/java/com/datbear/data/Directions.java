@@ -1,12 +1,20 @@
 package com.datbear.data;
 
 public enum Directions {
-    North,
-    NorthEast,
-    East,
-    SouthEast,
     South,
+    SouthSouthWest,
     SouthWest,
+    WestSouthWest,
     West,
-    NorthWest
+    WestNorthWest,
+    NorthWest,
+    NorthNorthWest,
+    North,
+    NorthNorthEast,
+    NorthEast,
+    EastNorthEast,
+    East,
+    EastSouthEast,
+    SouthEast,
+    SouthSouthEast
 }

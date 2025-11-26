@@ -13,7 +13,10 @@ public interface BearycudaTrialsConfig extends Config {
     @ConfigSection(name = "Menu Swaps", description = "All options relating to menu entry swaps", position = 2, closedByDefault = true)
     String menuSwaps = "menuSwaps";
 
-    @ConfigSection(name = "Debug", description = "Debugging options (menu items, extra overlays)", position = 3, closedByDefault = true)
+    @ConfigSection(name = "Boat True Tile/Heading", description = "Options for showing the boat's true tile and heading arrows", position = 3, closedByDefault = false)
+    String boatTrueTileHeading = "boatTrueTileHeading";
+
+    @ConfigSection(name = "Debug", description = "Debugging options (menu items, extra overlays)", position = 4, closedByDefault = true)
     String debug = "debug";
 
     //outlines
@@ -108,6 +111,56 @@ public interface BearycudaTrialsConfig extends Config {
     @ConfigItem(keyName = "portalBoatArrowColor", name = "Portal boat arrow color", description = "Color used for portal boat direction arrows", section = outlines, position = 18)
     default Color portalBoatArrowColor() {
         return new Color(0, 255, 0, 200);
+    }
+
+    // true boat tile / heading
+    @ConfigItem(keyName = "showTrueBoatTile", name = "Show true boat tile", description = "Highlight the boat's true tile", section = boatTrueTileHeading, position = 1)
+    default boolean showTrueBoatTile() {
+        return true;
+    }
+
+    @Alpha
+    @ConfigItem(keyName = "trueBoatTileFillColor", name = "True boat tile fill color", description = "Fill color for the boat's true tile", section = boatTrueTileHeading, position = 2)
+    default Color trueBoatTileFillColor() {
+        return new Color(255, 255, 255, 45);
+    }
+
+    @ConfigItem(keyName = "trueBoatTileBorderColor", name = "True boat tile border color", description = "Border color for the boat's true tile", section = boatTrueTileHeading, position = 3)
+    default Color trueBoatTileBorderColor() {
+        return Color.BLACK;
+    }
+
+    @ConfigItem(keyName = "showCurrentHeading", name = "Show current heading", description = "Show the current heading arrow", section = boatTrueTileHeading, position = 4)
+    default boolean showCurrentHeading() {
+        return false;
+    }
+
+    @Alpha
+    @ConfigItem(keyName = "currentHeadingColor", name = "Current heading color", description = "Color for the current heading arrow", section = boatTrueTileHeading, position = 5)
+    default Color currentHeadingColor() {
+        return Color.GREEN;
+    }
+
+    @ConfigItem(keyName = "showRequestedHeading", name = "Show requested heading", description = "Show the requested heading arrow", section = boatTrueTileHeading, position = 6)
+    default boolean showRequestedHeading() {
+        return false;
+    }
+
+    @Alpha
+    @ConfigItem(keyName = "requestedHeadingColor", name = "Requested heading color", description = "Color for the requested heading arrow", section = boatTrueTileHeading, position = 7)
+    default Color requestedHeadingColor() {
+        return Color.YELLOW;
+    }
+
+    @ConfigItem(keyName = "showHoveredHeading", name = "Show hovered heading", description = "Show the hovered heading arrow", section = boatTrueTileHeading, position = 8)
+    default boolean showHoveredHeading() {
+        return false;
+    }
+
+    @Alpha
+    @ConfigItem(keyName = "hoveredHeadingColor", name = "Hovered heading color", description = "Color for the hovered heading arrow", section = boatTrueTileHeading, position = 9)
+    default Color hoveredHeadingColor() {
+        return Color.WHITE;
     }
 
     //menu swaps

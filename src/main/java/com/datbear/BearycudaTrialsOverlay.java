@@ -3,7 +3,6 @@ package com.datbear;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.gameval.ItemID;
 import net.runelite.api.*;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
@@ -20,11 +19,12 @@ import com.datbear.data.TrialRoute;
 import com.datbear.overlay.WorldLines;
 import com.datbear.overlay.WorldPerspective;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.awt.*;
 
+@Slf4j
 public class BearycudaTrialsOverlay extends Overlay {
-    // Retain legacy constants (unused after config wiring) in case future fallback logic needed.
-
     @Inject
     private ItemManager itemManager;
 
@@ -61,11 +61,13 @@ public class BearycudaTrialsOverlay extends Overlay {
         if (player == null)
             return null;
 
-        var playerLoc = BoatLocation.fromLocal(client, player.getLocalLocation());
-        if (playerLoc == null)
+        var boatLocation = BoatLocation.fromLocal(client, player.getLocalLocation());
+        if (boatLocation == null)
             return null;
 
-        //renderCameraCenterDirection(graphics, Color.MAGENTA, 2, 40, Directions.SouthEast);
+        var playerLocation = player.getWorldLocation();
+
+        renderTrueInfo(graphics, boatLocation, playerLocation);
 
         renderLastMenuCanvasWorldPointOutline(graphics);
         highlightTrimmableSails(graphics);
@@ -78,18 +80,16 @@ public class BearycudaTrialsOverlay extends Overlay {
             return null;
         }
 
-        var boatLoc = BoatLocation.fromLocal(client, player.getLocalLocation());
-
-        renderPortalArrows(graphics, route);
-        highlightToadFlags(graphics, boatLoc);
+        renderPortalArrows(graphics, route, playerLocation);
+        highlightToadFlags(graphics, boatLocation);
         highlightCrates(graphics);
         highlightBoosts(graphics);
         renderWindMote(graphics);
         highlightTrialBoat(graphics);
 
-        var visible = plugin.getVisibleActiveLineForPlayer(playerLoc, 5);
+        var visible = plugin.getVisibleActiveLineForPlayer(boatLocation, 5);
         if (config.showRouteLines() && visible.size() >= 2) {
-            WorldLines.drawLinesOnWorld(graphics, client, visible, config.routeLineColor(), playerLoc.getPlane());
+            WorldLines.drawLinesOnWorld(graphics, client, visible, config.routeLineColor(), boatLocation.getPlane());
         }
 
         renderRouteDots(graphics, route);
@@ -98,6 +98,24 @@ public class BearycudaTrialsOverlay extends Overlay {
             renderDebugInfo(graphics, route);
         }
         return null;
+    }
+
+    private void renderTrueInfo(Graphics2D graphics, WorldPoint boatLocation, WorldPoint playerLocation) {
+        if (config.showTrueBoatTile()) {
+            highlightBoatTrueTile(graphics, boatLocation);
+        }
+
+        if (config.showRequestedHeading()) {
+            renderHeadingTriangle(graphics, playerLocation, plugin.getRequestedHeadingDirection(), config.requestedHeadingColor(), 30, 8);
+        }
+
+        if (config.showHoveredHeading()) {
+            renderHeadingTriangle(graphics, playerLocation, plugin.getHoveredHeadingDirection(), config.hoveredHeadingColor(), 30, 8);
+        }
+
+        if (config.showCurrentHeading()) {
+            renderHeadingTriangle(graphics, playerLocation, plugin.getCurrentHeadingDirection(), config.currentHeadingColor(), 30, 8);
+        }
     }
 
     private void renderRouteDots(Graphics2D graphics, TrialRoute route) {
@@ -139,127 +157,6 @@ public class BearycudaTrialsOverlay extends Overlay {
         graphics.drawString(label, start.getX() + (size / 2) + 2, start.getY() - (size / 2) - 2);
     }
 
-    public void renderCameraCenterDirection(Graphics2D graphics, Color color, int diameter, int arrowLength, Directions direction) {
-        if (graphics == null) {
-            return;
-        }
-        if (color == null) {
-            color = Color.WHITE;
-        }
-        if (diameter <= 0) {
-            diameter = 8;
-        }
-        if (arrowLength <= 0) {
-            arrowLength = 40;
-        }
-
-        int viewportXOffset = client.getViewportXOffset();
-        int viewportYOffset = client.getViewportYOffset();
-        int viewportWidth = client.getViewportWidth();
-        int viewportHeight = client.getViewportHeight();
-
-        if (viewportWidth <= 0 || viewportHeight <= 0) {
-            return;
-        }
-
-        int centerX = viewportXOffset + viewportWidth / 2;
-        int centerY = viewportYOffset + viewportHeight / 2;
-
-        double dx;
-        double dy;
-        if (direction != null) {
-            final double invSqrt2 = 1.0 / Math.sqrt(2.0);
-            double wx; // world X (east +)
-            double wy; // world Y (north +)
-            switch (direction) {
-                case North:
-                    wx = 0;
-                    wy = 1;
-                    break;
-                case NorthEast:
-                    wx = 1;
-                    wy = 1;
-                    break;
-                case East:
-                    wx = 1;
-                    wy = 0;
-                    break;
-                case SouthEast:
-                    wx = 1;
-                    wy = -1;
-                    break;
-                case South:
-                    wx = 0;
-                    wy = -1;
-                    break;
-                case SouthWest:
-                    wx = -1;
-                    wy = -1;
-                    break;
-                case West:
-                    wx = -1;
-                    wy = 0;
-                    break;
-                case NorthWest:
-                    wx = -1;
-                    wy = 1;
-                    break;
-                default:
-                    wx = 0;
-                    wy = -1;
-                    break; // default south
-            }
-            if (Math.abs(wx) == 1 && Math.abs(wy) == 1) {
-                wx *= invSqrt2;
-                wy *= invSqrt2;
-            }
-            int yaw = client.getCameraYaw() & 2047;
-            double yawRad = yaw * (Math.PI / 1024.0);
-            double baseAngle = Math.atan2(wx, wy);
-            double total = yawRad + baseAngle;
-            dx = Math.sin(total);
-            dy = -Math.cos(total);
-        } else {
-            int yaw = client.getCameraYaw() & 2047;
-            double yawRad = yaw * (Math.PI / 1024.0);
-            dx = Math.sin(yawRad);
-            dy = -Math.cos(yawRad);
-        }
-
-        int endX = (int) Math.round(centerX + dx * arrowLength);
-        int endY = (int) Math.round(centerY + dy * arrowLength);
-
-        // Center dot
-        int dotX = centerX - diameter / 2;
-        int dotY = centerY - diameter / 2;
-        Color borderColor = new Color(0, 0, 0, Math.min(255, color.getAlpha()));
-        Stroke previous = graphics.getStroke();
-        graphics.setColor(color);
-        graphics.fillOval(dotX, dotY, diameter, diameter);
-        graphics.setColor(borderColor);
-        graphics.setStroke(new BasicStroke(2f));
-        graphics.drawOval(dotX, dotY, diameter, diameter);
-
-        // Direction line
-        graphics.setColor(color);
-        graphics.setStroke(new BasicStroke(3f));
-        graphics.drawLine(centerX, centerY, endX, endY);
-
-        // Arrowhead
-        double arrowAngle = Math.atan2(dy, dx);
-        int headSize = 6;
-        double left = arrowAngle + Math.toRadians(150);
-        double right = arrowAngle - Math.toRadians(150);
-        int leftX = (int) Math.round(endX + Math.cos(left) * headSize);
-        int leftY = (int) Math.round(endY + Math.sin(left) * headSize);
-        int rightX = (int) Math.round(endX + Math.cos(right) * headSize);
-        int rightY = (int) Math.round(endY + Math.sin(right) * headSize);
-        graphics.drawLine(endX, endY, leftX, leftY);
-        graphics.drawLine(endX, endY, rightX, rightY);
-
-        graphics.setStroke(previous);
-    }
-
     private void renderDebugInfo(Graphics2D graphics, TrialRoute active) {
         if (client.getGameState() != GameState.LOGGED_IN) {
             return;
@@ -284,6 +181,16 @@ public class BearycudaTrialsOverlay extends Overlay {
         graphics.drawString("last visited idx = " + plugin.getLastVisitedIndex(), x, y += 15);
         graphics.drawString("toad flag idx = " + plugin.getHighlightedToadFlagIndex(), x, y += 15);
         graphics.drawString("next mote idx = " + nextMoteIndex, x, y += 15);
+
+        // Varbit-derived plugin state
+        graphics.drawString("boatSpawnedAngle = " + plugin.getBoatSpawnedAngle(), x, y += 15);
+        graphics.drawString("boatSpawnedFineX = " + plugin.getBoatSpawnedFineX(), x, y += 15);
+        graphics.drawString("boatSpawnedFineZ = " + plugin.getBoatSpawnedFineZ(), x, y += 15);
+        graphics.drawString("boatBaseSpeed = " + plugin.getBoatBaseSpeed(), x, y += 15);
+        graphics.drawString("boatSpeedCap = " + plugin.getBoatSpeedCap(), x, y += 15);
+        graphics.drawString("boatSpeedBoostDuration = " + plugin.getBoatSpeedBoostDuration(), x, y += 15);
+        graphics.drawString("isInTrial = " + plugin.getIsInTrial(), x, y += 15);
+
     }
 
     private void renderLastMenuCanvasWorldPointOutline(Graphics2D graphics) {
@@ -418,17 +325,135 @@ public class BearycudaTrialsOverlay extends Overlay {
         OverlayUtil.renderPolygon(graphics, hull, config.trimSailHighlightColor());
     }
 
-    private void renderPortalArrows(Graphics2D graphics, TrialRoute route) {
+    private void renderPortalArrows(Graphics2D graphics, TrialRoute route, WorldPoint boatLoc) {
         var portalDirection = plugin.getVisiblePortalDirection(route);
         if (portalDirection == null) {
             return;
         }
-        if (config.showPortalRouteArrows()) {
-            renderCameraCenterDirection(graphics, config.portalRouteArrowColor(), 2, 50, portalDirection.FirstMovementDirection);
+
+        if (config.showPortalRouteArrows() && portalDirection.FirstMovementDirection != portalDirection.BoatDirection) {
+            renderHeadingTriangle(graphics, boatLoc, portalDirection.FirstMovementDirection, config.portalRouteArrowColor(), 100, 18);
         }
+
         if (config.showPortalBoatArrows()) {
-            renderCameraCenterDirection(graphics, config.portalBoatArrowColor(), 2, 50, portalDirection.BoatDirection);
+            renderHeadingTriangle(graphics, boatLoc, portalDirection.BoatDirection, config.portalBoatArrowColor(), 80, 18);
         }
+    }
+
+    private void highlightBoatTrueTile(Graphics2D graphics, WorldPoint worldPoint) {
+        var localPoints = WorldPerspective.getInstanceLocalPointFromReal(client, worldPoint);
+        if (localPoints == null || localPoints.isEmpty()) {
+            return;
+        }
+
+        for (var lp : localPoints) {
+            if (lp == null)
+                continue;
+            var poly = Perspective.getCanvasTilePoly(client, lp);
+            if (poly == null)
+                continue;
+
+            // Draw a translucent fill and a bold border so the tile is obvious
+            Color fill = config.trueBoatTileFillColor();
+            Color border = config.trueBoatTileBorderColor();
+            Stroke oldStroke = graphics.getStroke();
+            Composite oldComposite = graphics.getComposite();
+
+            graphics.setColor(fill);
+            graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+            graphics.fill(poly);
+
+            graphics.setComposite(oldComposite);
+            graphics.setColor(border);
+            graphics.setStroke(new BasicStroke(3f));
+            graphics.draw(poly);
+
+            // restore previous graphics state
+            graphics.setStroke(oldStroke);
+            graphics.setComposite(oldComposite);
+
+            // only draw first matching instance tile
+            break;
+        }
+    }
+
+    private void renderHeadingTriangle(Graphics2D graphics, WorldPoint worldPoint, Directions direction, Color color, int offset, int size) {
+        if (graphics == null || worldPoint == null || direction == null) {
+            return;
+        }
+
+        if (color == null) {
+            color = Color.WHITE;
+        }
+
+        if (offset <= 0) {
+            offset = 10;
+        }
+
+        var lp = LocalPoint.fromWorld(client, worldPoint);
+
+        if (lp == null) {
+            log.info("LP is null for worldPoint {}", worldPoint);
+            return;
+        }
+
+        var poly = Perspective.getCanvasTilePoly(client, lp);
+        if (poly == null) {
+            log.info("Poly is null for localPoint {}", lp);
+            return;
+        }
+
+        Rectangle bounds = poly.getBounds();
+        int centerX = bounds.x + bounds.width / 2;
+        int centerY = bounds.y + bounds.height / 2;
+
+        // Compute a world-space direction vector from the enum ordinal, then rotate by camera yaw.
+        // Assume Directions is ordered starting at South and rotating counter-clockwise in 22.5° steps.
+        int stepIndex = direction.ordinal();
+        double angleRad = Math.toRadians(stepIndex * 22.5);
+        // For stepIndex = 0 (South), we want wx=0, wy=-1, so use sin/cos with a 90° phase shift.
+        double wx = -Math.sin(angleRad);
+        double wy = -Math.cos(angleRad);
+
+        int yaw = client.getCameraYaw() & 2047;
+        double yawRad = yaw * (Math.PI / 1024.0);
+        double baseAngle = Math.atan2(wx, wy);
+        double total = yawRad + baseAngle;
+
+        double dx = Math.sin(total);
+        double dy = -Math.cos(total);
+
+        int tipX = (int) Math.round(centerX + dx * offset);
+        int tipY = (int) Math.round(centerY + dy * offset);
+
+        int baseHalfWidth = size * 3 / 4;
+        int baseBack = size;
+
+        double leftAngle = Math.atan2(dy, dx) + Math.PI / 2.0;
+        double rightAngle = Math.atan2(dy, dx) - Math.PI / 2.0;
+
+        int baseCenterX = (int) Math.round(centerX + dx * (offset - baseBack));
+        int baseCenterY = (int) Math.round(centerY + dy * (offset - baseBack));
+
+        int leftX = (int) Math.round(baseCenterX + Math.cos(leftAngle) * baseHalfWidth);
+        int leftY = (int) Math.round(baseCenterY + Math.sin(leftAngle) * baseHalfWidth);
+        int rightX = (int) Math.round(baseCenterX + Math.cos(rightAngle) * baseHalfWidth);
+        int rightY = (int) Math.round(baseCenterY + Math.sin(rightAngle) * baseHalfWidth);
+
+        int[] xs = new int[] { tipX, leftX, rightX };
+        int[] ys = new int[] { tipY, leftY, rightY };
+
+        Color border = new Color(0, 0, 0, Math.min(255, color.getAlpha()));
+        Stroke previous = graphics.getStroke();
+
+        graphics.setColor(color);
+        graphics.fillPolygon(xs, ys, 3);
+
+        graphics.setColor(border);
+        graphics.setStroke(new BasicStroke(1f));
+        graphics.drawPolygon(xs, ys, 3);
+
+        graphics.setStroke(previous);
     }
 
 }

@@ -23,7 +23,7 @@ dependencies {
 }
 
 group = 'com.datbear'
-version = '1.2'
+version = '1.0'
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'

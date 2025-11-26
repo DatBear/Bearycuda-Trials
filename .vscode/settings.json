@@ -26,7 +26,8 @@
         "editor.formatOnSave": true,
         "editor.formatOnType": true
     },
-    "java.compile.nullAnalysis.mode": "disabled"
+    "java.compile.nullAnalysis.mode": "disabled",
+    "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable"
 
     // If you want Spotless/Gradle formatting to run on save automatically
     // (so the pre-processor + spotlessApply happen), install "emeraldwalk.runonsave"

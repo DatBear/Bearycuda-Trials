@@ -129,8 +129,10 @@ public class RouteModificationHelper {
             return;
         }
         int nearestIdx = -1;
+        int minAllowed = Math.max(0, lastVisitedIndex - 5);
+        int maxAllowed = Math.min(route.Points.size() - 1, lastVisitedIndex + 5);
         double nearestDist = Double.MAX_VALUE;
-        for (int i = 0; i < route.Points.size(); i++) {
+        for (int i = minAllowed; i <= maxAllowed; i++) {
             WorldPoint p = route.Points.get(i);
             if (p == null) {
                 continue;
@@ -139,17 +141,6 @@ public class RouteModificationHelper {
             if (d < nearestDist) {
                 nearestDist = d;
                 nearestIdx = i;
-            }
-        }
-        if (nearestIdx == -1) {
-            AddWaypoint(worldPoint, route);
-            return;
-        }
-        if (lastVisitedIndex >= 0) {
-            int minAllowed = Math.max(0, lastVisitedIndex - 5);
-            int maxAllowed = Math.min(route.Points.size() - 1, lastVisitedIndex + 5);
-            if (nearestIdx < minAllowed || nearestIdx > maxAllowed) {
-                return; // outside allowed range
             }
         }
         // Insert after nearest to preserve forward ordering feel.
@@ -189,12 +180,12 @@ public class RouteModificationHelper {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("// Trial Route:\n");
+        sb.append("\t// Trial Route:\n");
         var idx = 0;
         for (var point : route.Points) {
-            sb.append(String.format("/*%d*/new WorldPoint(%d, %d, %d),\n", idx++, point.getX(), point.getY(), point.getPlane()));
+            sb.append(String.format("/*%d*/new WorldPoint(%d, %d, %d)%s\n", idx++, point.getX(), point.getY(), point.getPlane(), idx < route.Points.size() ? "," : ""));
         }
-        sb.append("// End of trial route:\n");
+        sb.append("\t// End of trial route\n");
 
         var stringSelection = new StringSelection(sb.toString());
         var clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();

@@ -12,6 +12,7 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import com.datbear.data.AllSails;
+import com.datbear.data.Directions;
 import com.datbear.data.PortalDirection;
 import com.datbear.data.ToadFlagGameObject;
 import com.datbear.data.TrialInfo;
@@ -40,10 +41,10 @@ import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.PostMenuSort;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.Notifier;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.config.ConfigManager;
@@ -125,8 +126,105 @@ public class BearycudaTrialsPlugin extends Plugin {
     @Getter(AccessLevel.PACKAGE)
     private WorldPoint lastMenuCanvasWorldPoint = null;
 
+    //varbits...
     @Getter(AccessLevel.PACKAGE)
-    private int cargoItemCount = 0;
+    private int boatSpawnedAngle;
+
+    @Getter(AccessLevel.PACKAGE)
+    private int boatSpawnedFineX;
+
+    @Getter(AccessLevel.PACKAGE)
+    private int boatSpawnedFineZ;
+
+    @Getter(AccessLevel.PACKAGE)
+    private int boatBaseSpeed;
+
+    @Getter(AccessLevel.PACKAGE)
+    private int boatSpeedCap;
+
+    @Getter(AccessLevel.PACKAGE)
+    private int boatSpeedBoostDuration;
+
+    @Getter(AccessLevel.PACKAGE)
+    private int boatAcceleration;
+
+    @Getter(AccessLevel.PACKAGE)
+    private int isInTrial;
+
+    @Getter(AccessLevel.PACKAGE)
+    private Directions currentHeadingDirection = Directions.North;
+
+    @Getter(AccessLevel.PACKAGE)
+    private Directions requestedHeadingDirection = currentHeadingDirection;
+
+    @Getter(AccessLevel.PACKAGE)
+    private Directions hoveredHeadingDirection = Directions.North;
+
+    private void manageHeadingClicks(MenuOptionClicked event) {
+        if (event.getMenuAction() != MenuAction.SET_HEADING) {
+            return;
+        }
+        //log.info("[SET HEADING] {}", event);
+        requestedHeadingDirection = Directions.values()[event.getId()];
+    }
+
+    private void updateCurrentHeading() {
+        if (currentHeadingDirection == null) {
+            currentHeadingDirection = Directions.South;
+        }
+
+        if (requestedHeadingDirection == null) {
+            requestedHeadingDirection = currentHeadingDirection;
+            return;
+        }
+
+        if (currentHeadingDirection == requestedHeadingDirection) {
+            return;
+        }
+
+        Directions[] all = Directions.values();
+        int n = all.length;
+        int currentIndex = currentHeadingDirection.ordinal();
+        int targetIndex = requestedHeadingDirection.ordinal();
+
+        int forwardSteps = (targetIndex - currentIndex + n) % n;
+        int backwardSteps = (currentIndex - targetIndex + n) % n;
+
+        if (forwardSteps == 0) {
+            return;
+        }
+
+        if (forwardSteps <= backwardSteps) {
+            currentIndex = (currentIndex + 1) % n;
+        } else {
+            currentIndex = (currentIndex - 1 + n) % n;
+        }
+
+        currentHeadingDirection = all[currentIndex];
+    }
+
+    private void manageHeadingHovers(PostMenuSort event) {
+        var entries = client.getMenuEntries();
+        var headingEntry = Arrays.stream(entries)
+                .filter(e -> e.getOption().equals("Set heading"))
+                .findFirst().orElse(null);
+        if (headingEntry != null) {
+            //log.info("[SET HEADING HOVER] {}", headingEntry);
+            hoveredHeadingDirection = Directions.values()[headingEntry.getIdentifier()];
+        }
+    }
+
+    private void updateFromVarbits() {
+        //todo check VarbitID.SAILING_BOAT_TIME_TILL_TRIM and VarbitID.SAILING_BOAT_TIME_TRIM_WINDOW to see if they're working in the future
+        boatSpawnedAngle = client.getVarbitValue(VarbitID.SAILING_BOAT_SPAWNED_ANGLE);
+        boatSpawnedFineX = client.getVarbitValue(VarbitID.SAILING_BOAT_SPAWNED_FINEX);
+        boatSpawnedFineZ = client.getVarbitValue(VarbitID.SAILING_BOAT_SPAWNED_FINEZ);
+        boatBaseSpeed = client.getVarbitValue(VarbitID.SAILING_SIDEPANEL_BOAT_BASESPEED);
+        boatSpeedCap = client.getVarbitValue(VarbitID.SAILING_SIDEPANEL_BOAT_SPEEDCAP);
+        boatSpeedBoostDuration = client.getVarbitValue(VarbitID.SAILING_SIDEPANEL_BOAT_SPEEDBOOST_DURATION);
+        boatAcceleration = client.getVarbitValue(VarbitID.SAILING_SIDEPANEL_BOAT_ACCELERATION);
+        isInTrial = client.getVarbitValue(VarbitID.SAILING_BT_IN_TRIAL);
+    }
 
     @Override
     protected void startUp() {
@@ -158,40 +256,14 @@ public class BearycudaTrialsPlugin extends Plugin {
     }
 
     @Subscribe
-    public void onItemContainerChanged(ItemContainerChanged event) {
-    }
-
-    @Subscribe
     public void onGameTick(GameTick tick) {
         if (client == null || client.getLocalPlayer() == null) {
             return;
         }
-        TrialInfo newTrialInfo = TrialInfo.getCurrent(client);
 
-        // Allow a grace period of 18 game ticks where TrialInfo may be null (e.g., region/load transitions) before clearing currentTrial.
-        // We only apply the null after 18 consecutive null ticks.
-        if (newTrialInfo != null) {
-            // If trial info reappears, clear any null-grace countdown
-            nullTrialConsecutiveTicks = 0;
-
-            // If the trial changed (location/rank/reset time), reset route state
-            if (currentTrial == null || currentTrial.Location != newTrialInfo.Location || currentTrial.Rank != newTrialInfo.Rank || newTrialInfo.CurrentTimeSeconds < currentTrial.CurrentTimeSeconds) {
-                resetRouteData();
-            }
-
-            updateToadsThrown(newTrialInfo);
-            currentTrial = newTrialInfo;
-        } else {
-            if (currentTrial != null) {
-                nullTrialConsecutiveTicks += 1;
-                if (nullTrialConsecutiveTicks >= 18) {
-                    resetRouteData();
-                    currentTrial = null;
-                }
-            } else {
-                nullTrialConsecutiveTicks = 0;
-            }
-        }
+        updateFromVarbits();
+        updateCurrentTrial();
+        updateCurrentHeading();
 
         final var player = client.getLocalPlayer();
         var playerPoint = BoatLocation.fromLocal(client, player.getLocalLocation());
@@ -203,6 +275,23 @@ public class BearycudaTrialsPlugin extends Plugin {
         if (active != null) {
             markNextWaypointVisited(playerPoint, active, VISIT_TOLERANCE);
         }
+    }
+
+    @Subscribe
+    public void onVarbitChanged(VarbitChanged event) {
+        if (event.getVarbitId() == VarbitID.SAILING_BOAT_SPAWNED_ANGLE) {
+            boatSpawnedAngle = client.getVarbitValue(VarbitID.SAILING_BOAT_SPAWNED_ANGLE);
+            updateCurrentHeadingFromVarbit(boatSpawnedAngle);
+        }
+    }
+
+    private void updateCurrentHeadingFromVarbit(int value) {
+        var ordinal = value / 128;
+        Directions[] directions = Directions.values();
+        if (ordinal < 0 || ordinal >= directions.length) {
+            return;
+        }
+        currentHeadingDirection = directions[ordinal];
     }
 
     @Subscribe
@@ -262,13 +351,9 @@ public class BearycudaTrialsPlugin extends Plugin {
     }
 
     @Subscribe
-    public void onVarbitChanged(VarbitChanged event) {
-
-    }
-
-    @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event) {
         RouteModificationHelper.handleMenuOptionClicked(event, client, getActiveTrialRoute(), lastMenuCanvasPosition, lastVisitedIndex);
+        manageHeadingClicks(event);
 
         if (!config.showDebugMenuCopyTileOptions()) {
             return;
@@ -422,6 +507,8 @@ public class BearycudaTrialsPlugin extends Plugin {
 
     @Subscribe(priority = -1)
     public void onPostMenuSort(PostMenuSort e) {
+        manageHeadingHovers(e);
+
         if (client.isMenuOpen()) {
             return;
         }
@@ -442,6 +529,35 @@ public class BearycudaTrialsPlugin extends Plugin {
         }
 
         client.setMenuEntries(entries);
+    }
+
+    private void updateCurrentTrial() {
+        TrialInfo newTrialInfo = TrialInfo.getCurrent(client);
+
+        // Allow a grace period of 18 game ticks where TrialInfo may be null (e.g., region/load transitions) before clearing currentTrial.
+        // We only apply the null after 18 consecutive null ticks.
+        if (newTrialInfo != null) {
+            // If trial info reappears, clear any null-grace countdown
+            nullTrialConsecutiveTicks = 0;
+
+            // If the trial changed (location/rank/reset time), reset route state
+            if (currentTrial == null || currentTrial.Location != newTrialInfo.Location || currentTrial.Rank != newTrialInfo.Rank || newTrialInfo.CurrentTimeSeconds < currentTrial.CurrentTimeSeconds) {
+                resetRouteData();
+            }
+
+            updateToadsThrown(newTrialInfo);
+            currentTrial = newTrialInfo;
+        } else {
+            if (currentTrial != null) {
+                nullTrialConsecutiveTicks += 1;
+                if (nullTrialConsecutiveTicks >= 18) {
+                    resetRouteData();
+                    currentTrial = null;
+                }
+            } else {
+                nullTrialConsecutiveTicks = 0;
+            }
+        }
     }
 
     private MenuEntry[] removeMenuEntries(MenuEntry[] entries, Collection<String> toRemove) {
