@@ -9,3 +9,4 @@ nb-configuration.xml
 nbproject/
 *.jar
 *.class
+!gradle/wrapper/gradle-wrapper.jar

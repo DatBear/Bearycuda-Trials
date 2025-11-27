@@ -42,6 +42,10 @@ import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.PostMenuSort;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.VarbitID;
+import net.runelite.api.gameval.InterfaceID.SailingSidepanel;
+import net.runelite.api.widgets.InterfaceID;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetID;
 import net.runelite.client.Notifier;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.config.ConfigManager;
@@ -81,6 +85,7 @@ public class BearycudaTrialsPlugin extends Plugin {
     private final String TRIM_AVAILABLE_TEXT = "you feel a gust of wind.";
     private final String TRIM_SUCCESS_TEXT = "you trim the sails";
     private final String TRIM_FAIL_TEXT = "the wind dies down";
+    private final String WIND_MOTE_RELEASED_TEXT = "you release the wind mote for a burst of speed";
 
     private final String MENU_OPTION_START_PREVIOUS_RANK = "start-previous";
     private final String MENU_OPTION_QUICK_RESET = "quick-reset";
@@ -163,6 +168,12 @@ public class BearycudaTrialsPlugin extends Plugin {
     @Getter(AccessLevel.PACKAGE)
     private Directions hoveredHeadingDirection = Directions.North;
 
+    @Getter(AccessLevel.PACKAGE)
+    private int windMoteReleasedTick;
+
+    @Getter(AccessLevel.PACKAGE)
+    private Widget windMoteButtonWidget;
+
     @Override
     protected void startUp() {
         //log.info("Bearycuda Trials Plugin started!");
@@ -201,6 +212,8 @@ public class BearycudaTrialsPlugin extends Plugin {
         updateFromVarbits();
         updateCurrentTrial();
         updateCurrentHeading();
+
+        updateWindMoteButtonWidget();
 
         final var player = client.getLocalPlayer();
         var playerPoint = BoatLocation.fromLocal(client, player.getLocalLocation());
@@ -247,7 +260,7 @@ public class BearycudaTrialsPlugin extends Plugin {
             toadFlagsById.computeIfAbsent(id, k -> new ArrayList<>()).add(obj);
         }
         var isObstacle = ObstacleTracking.OBSTACLE_GAMEOBJECT_IDS.contains(id);
-        if (isObstacle && currentTrial != null && config.showObstacleOutlines()) {
+        if (isObstacle && config.showObstacleOutlines()) {
             obstacleGameObjectsById.computeIfAbsent(id, k -> new ArrayList<>()).add(obj);
             // Add world points for all tiles covered by this obstacle's footprint
             try {
@@ -273,7 +286,9 @@ public class BearycudaTrialsPlugin extends Plugin {
             } catch (Exception ex) {
                 obstacleWorldPoints.add(obj.getWorldLocation());
             }
-            removeGameObjectFromScene(obj);
+            if (currentTrial != null) {
+                removeGameObjectFromScene(obj);
+            }
         }
         var isSail = AllSails.GAMEOBJECT_IDS.contains(id);
         if (isSail) {
@@ -470,6 +485,10 @@ public class BearycudaTrialsPlugin extends Plugin {
         //log.info("[CHAT] {}", msg);
         if (msg == null || msg.isEmpty()) {
             return;
+        }
+
+        if (msg.contains(WIND_MOTE_RELEASED_TEXT)) {
+            windMoteReleasedTick = client.getTickCount();
         }
         if (msg.contains(TRIM_AVAILABLE_TEXT)) {
             needsTrim = true;
@@ -982,6 +1001,22 @@ public class BearycudaTrialsPlugin extends Plugin {
 
         } else {
             log.info("[SPAWN] {} -> GameObject id={} (no world point available)", type, gameObject.getId());
+        }
+    }
+
+    void updateWindMoteButtonWidget() {
+        var widget = client.getWidget(SailingSidepanel.FACILITIES_ROWS);
+        if (widget == null) {
+            //log.info("updateWindMoteButtonWidget: FACILITIES_ROWS widget is null");
+            return;
+        }
+
+        var button = widget.getChild(69);
+        if (button != null) {
+            //log.info("updateWindMoteButtonWidget: found wind mote button widget");
+            if (windMoteButtonWidget == null) {
+                windMoteButtonWidget = button;
+            }
         }
     }
 

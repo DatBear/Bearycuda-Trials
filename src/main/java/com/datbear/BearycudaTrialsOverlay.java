@@ -11,6 +11,8 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetInfo;
 
 import javax.inject.Inject;
 
@@ -42,11 +44,10 @@ public class BearycudaTrialsOverlay extends Overlay {
     private int nextMoteIndex = -1;
 
     @Inject
-    public BearycudaTrialsOverlay(Client client, BearycudaTrialsPlugin plugin,
-            BearycudaTrialsConfig config) {
+    public BearycudaTrialsOverlay(Client client, BearycudaTrialsPlugin plugin, BearycudaTrialsConfig config) {
         super();
         setPosition(OverlayPosition.DYNAMIC);
-        setLayer(OverlayLayer.UNDER_WIDGETS);
+        setLayer(OverlayLayer.ABOVE_WIDGETS);
         this.client = client;
         this.plugin = plugin;
         this.config = config;
@@ -86,6 +87,7 @@ public class BearycudaTrialsOverlay extends Overlay {
         highlightCrates(graphics);
         highlightBoosts(graphics);
         renderWindMote(graphics);
+        renderWindMoteCooldown(graphics);
         highlightTrialBoat(graphics);
 
         var visible = plugin.getVisibleActiveLineForPlayer(boatLocation, 5);
@@ -171,6 +173,8 @@ public class BearycudaTrialsOverlay extends Overlay {
         int y = 200;
         graphics.setFont(graphics.getFont().deriveFont(Font.BOLD, 15f));
         graphics.setColor(Color.WHITE);
+
+        graphics.drawString("tick = " + client.getTickCount(), x, y += 15);
 
         var boatLoc = BoatLocation.fromLocal(client, player.getLocalLocation());
         graphics.drawString("boat loc = " + (boatLoc == null ? "null" : boatLoc.toString()), x, y += 15);
@@ -332,13 +336,13 @@ public class BearycudaTrialsOverlay extends Overlay {
             return;
         }
 
+        if (config.showPortalBoatArrows()) {
+            renderHeadingTriangle(graphics, boatLoc, portalDirection.BoatDirection, config.portalBoatArrowColor(), 100, 18);
+        }
+
         if (config.showPortalRouteArrows() && portalDirection.FirstMovementDirection != portalDirection.BoatDirection) {
             renderHeadingTriangle(graphics, boatLoc, portalDirection.FirstMovementDirection, config.portalRouteArrowColor(), 100, 18);
             renderHeadingTriangle(graphics, boatLoc, plugin.getHoveredHeadingDirection(), config.hoveredHeadingColor(), 100, 12);
-        }
-
-        if (config.showPortalBoatArrows()) {
-            renderHeadingTriangle(graphics, boatLoc, portalDirection.BoatDirection, config.portalBoatArrowColor(), 100, 18);
         }
     }
 
@@ -395,13 +399,13 @@ public class BearycudaTrialsOverlay extends Overlay {
         var lp = LocalPoint.fromWorld(client, worldPoint);
 
         if (lp == null) {
-            log.info("LP is null for worldPoint {}", worldPoint);
+            //log.info("LP is null for worldPoint {}", worldPoint);
             return;
         }
 
         var poly = Perspective.getCanvasTilePoly(client, lp);
         if (poly == null) {
-            log.info("Poly is null for localPoint {}", lp);
+            //log.info("Poly is null for localPoint {}", lp);
             return;
         }
 
@@ -491,6 +495,91 @@ public class BearycudaTrialsOverlay extends Overlay {
                 }
             }
         }
+    }
+
+    void renderWindMoteCooldown(Graphics2D graphics) {
+        if (!config.showSpeedBoostRemaining()) {
+            return;
+        }
+
+        var durationTicks = plugin.getBoatSpeedBoostDuration();
+        var elapsedTicks = client.getTickCount() - plugin.getWindMoteReleasedTick();
+
+        if (plugin.getBoatSpeedBoostDuration() <= 0 || plugin.getWindMoteReleasedTick() <= 0 || elapsedTicks >= durationTicks) {
+            return;
+        }
+
+        var remainingRatio = 1.0 - (double) elapsedTicks / (double) durationTicks;
+        var button = plugin.getWindMoteButtonWidget();
+        if (button == null || button.isHidden() || remainingRatio <= 0) {
+            return;
+        }
+
+        var bounds = button.getBounds();
+        if (bounds == null) {
+            return;
+        }
+
+        var x = bounds.x;
+        var y = bounds.y;
+        var width = bounds.width;
+        var height = bounds.height;
+        //log.info("rendering wind mote cooldown overlay at x={}, y={}, width={}, height={}", x, y, width, height);
+
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        // Lerp color: remainingRatio=1 => green (0,255,0); remainingRatio=0 => red (255,0,0)
+        int r = (int) Math.round(255 * (1.0 - remainingRatio));
+        int g = (int) Math.round(255 * remainingRatio);
+        int b = 0;
+        Color durationColor = new Color(r, g, b, 150);
+
+        var oldClip = graphics.getClip();
+        var oldComposite = graphics.getComposite();
+        var oldColor = graphics.getColor();
+
+        graphics.setClip(new Rectangle(x, y, width, height));
+        //graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .6f));
+        graphics.setColor(durationColor);
+
+        var centerX = x + width / 2;
+        var centerY = y + height / 2;
+        var radius = Math.max(width, height);
+        var angle = (int) Math.round(remainingRatio * 360.0);
+        // Draw remaining cooldown as a clockwise pie slice (use negative arcAngle for clockwise in AWT)
+        graphics.fillArc(centerX - radius, centerY - radius, radius * 2, radius * 2, 90, angle);
+
+        // Ticks remaining label (large font, centered). Color lerps from green->red as duration lowers.
+        int ticksRemaining = durationTicks - elapsedTicks;
+        if (ticksRemaining < 0) {
+            ticksRemaining = 0;
+        }
+
+        var textColor = Color.YELLOW;
+
+        // Choose a font size that fits inside the widget
+        int baseSize = Math.min(width, height);
+        float fontSize = Math.max(12f, baseSize * 0.6f);
+        Font oldFont = graphics.getFont();
+        Font bigFont = oldFont.deriveFont(Font.BOLD, fontSize);
+        graphics.setFont(bigFont);
+        FontMetrics fm = graphics.getFontMetrics();
+        String label = String.valueOf(ticksRemaining);
+        int textWidth = fm.stringWidth(label);
+        int textHeight = fm.getAscent();
+        int textX = x + (width - textWidth) / 2;
+        int textY = y + (height + textHeight) / 2 - fm.getDescent();
+        graphics.setColor(Color.BLACK);
+        graphics.drawString(label, textX + 1, textY + 1); // shadow for readability
+        graphics.setColor(textColor);
+        graphics.drawString(label, textX, textY);
+        graphics.setFont(oldFont);
+
+        graphics.setClip(oldClip);
+        graphics.setComposite(oldComposite);
+        graphics.setColor(oldColor);
     }
 
 }

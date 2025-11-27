@@ -129,6 +129,11 @@ public interface BearycudaTrialsConfig extends Config {
         return true;
     }
 
+    @ConfigItem(keyName = "showSpeedBoostRemaining", name = "Show speed boost remaining", description = "Show a radial cooldown and ticks remaining on the wind mote button", section = outlines, position = 22)
+    default boolean showSpeedBoostRemaining() {
+        return true;
+    }
+
     // true boat tile / heading
     @ConfigItem(keyName = "showBoatTrueTile", name = "Show true boat tile", description = "Highlight the boat's true tile", section = boatTrueTileHeading, position = 1)
     default boolean showBoatTrueTile() {
