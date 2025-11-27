@@ -81,7 +81,6 @@ public class BearycudaTrialsOverlay extends Overlay {
             return null;
         }
 
-        highlightObstacleTiles(graphics);
         renderPortalArrows(graphics, route, playerLocation);
         highlightToadFlags(graphics, boatLocation);
         highlightCrates(graphics);
@@ -194,6 +193,7 @@ public class BearycudaTrialsOverlay extends Overlay {
         graphics.drawString("boatBaseSpeed = " + plugin.getBoatBaseSpeed(), x, y += 15);
         graphics.drawString("boatSpeedCap = " + plugin.getBoatSpeedCap(), x, y += 15);
         graphics.drawString("boatSpeedBoostDuration = " + plugin.getBoatSpeedBoostDuration(), x, y += 15);
+        graphics.drawString("windMoteReleasedTick = " + plugin.getWindMoteReleasedTick(), x, y += 15);
         graphics.drawString("isInTrial = " + plugin.getIsInTrial(), x, y += 15);
 
     }
@@ -460,41 +460,6 @@ public class BearycudaTrialsOverlay extends Overlay {
         graphics.drawPolygon(xs, ys, 3);
 
         graphics.setStroke(previous);
-    }
-
-    private void highlightObstacleTiles(Graphics2D graphics) {
-        if (!config.showObstacleOutlines()) {
-            return;
-        }
-
-        var obstacleWorldPoints = plugin.getObstacleWorldPoints();
-        if (obstacleWorldPoints == null || obstacleWorldPoints.isEmpty()) {
-            return;
-        }
-
-        Color obstacleColor = Color.RED;
-
-        for (WorldPoint obstacleWorldPoint : obstacleWorldPoints) {
-            if (obstacleWorldPoint == null) {
-                continue;
-            }
-
-            var localPoints = WorldPerspective.getInstanceLocalPointFromReal(client, obstacleWorldPoint);
-            if (localPoints == null || localPoints.isEmpty()) {
-                continue;
-            }
-
-            for (LocalPoint localPoint : localPoints) {
-                if (localPoint == null) {
-                    continue;
-                }
-
-                Polygon polygon = Perspective.getCanvasTilePoly(client, localPoint);
-                if (polygon != null) {
-                    OverlayUtil.renderPolygon(graphics, polygon, obstacleColor);
-                }
-            }
-        }
     }
 
     void renderWindMoteCooldown(Graphics2D graphics) {

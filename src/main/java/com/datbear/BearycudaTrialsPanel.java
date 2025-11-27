@@ -17,8 +17,7 @@ public class BearycudaTrialsPanel extends OverlayPanel {
     private BearycudaTrialsConfig config;
 
     @Inject
-    public BearycudaTrialsPanel(Client client, BearycudaTrialsPlugin plugin,
-            BearycudaTrialsConfig config) {
+    public BearycudaTrialsPanel(Client client, BearycudaTrialsPlugin plugin, BearycudaTrialsConfig config) {
         super(plugin);
         this.client = client;
         this.plugin = plugin;

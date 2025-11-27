@@ -786,7 +786,7 @@ public class TrialRoute {
                         new PortalDirection(105, PortalColors.Black, Directions.West, Directions.West),
                         new PortalDirection(113, PortalColors.Cyan, Directions.North, Directions.NorthNorthWest),
                         new PortalDirection(125, PortalColors.Cyan, Directions.West, Directions.South),
-                        new PortalDirection(135, PortalColors.Pink, Directions.West, Directions.North)//
+                        new PortalDirection(135, PortalColors.Pink, Directions.West, Directions.West)//
         );
 
         public static final List<TrialRoute> AllTrialRoutes = new ArrayList<TrialRoute>(
