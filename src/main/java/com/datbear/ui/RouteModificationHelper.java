@@ -81,10 +81,7 @@ public class RouteModificationHelper {
         if (option == null) {
             return false;
         }
-        boolean isOur = option.equals(MENU_ADD_WAYPOINT)
-                || option.equals(MENU_INSERT_WAYPOINT)
-                || option.equals(MENU_REMOVE_WAYPOINT)
-                || option.equals(MENU_EXPORT_ROUTE_POINTS);
+        boolean isOur = option.equals(MENU_ADD_WAYPOINT) || option.equals(MENU_INSERT_WAYPOINT) || option.equals(MENU_REMOVE_WAYPOINT) || option.equals(MENU_EXPORT_ROUTE_POINTS);
         if (!isOur) {
             return false;
         }
@@ -100,7 +97,7 @@ public class RouteModificationHelper {
         } else if (option.equals(MENU_INSERT_WAYPOINT)) {
             InsertWaypoint(worldPoint, route, lastVisitedIndex);
         } else if (option.equals(MENU_REMOVE_WAYPOINT)) {
-            RemoveWaypoint(worldPoint, route);
+            RemoveWaypoint(worldPoint, route, lastVisitedIndex);
         } else if (option.equals(MENU_EXPORT_ROUTE_POINTS)) {
             ExportRoute(route);
         }
@@ -147,7 +144,7 @@ public class RouteModificationHelper {
         route.Points.add(nearestIdx + 1, worldPoint);
     }
 
-    private static void RemoveWaypoint(WorldPoint worldPoint, TrialRoute route) {
+    private static void RemoveWaypoint(WorldPoint worldPoint, TrialRoute route, int lastVisitedIndex) {
         if (route == null || worldPoint == null) {
             return;
         }
@@ -158,7 +155,9 @@ public class RouteModificationHelper {
         int removeIdx = -1;
         double threshold = 5.0; // tiles
         double nearestDist = Double.MAX_VALUE;
-        for (int i = 0; i < route.Points.size(); i++) {
+        int minAllowed = Math.max(0, lastVisitedIndex - 5);
+        int maxAllowed = Math.min(route.Points.size() - 1, lastVisitedIndex + 5);
+        for (int i = minAllowed; i <= maxAllowed; i++) {
             WorldPoint p = route.Points.get(i);
             if (p == null) {
                 continue;

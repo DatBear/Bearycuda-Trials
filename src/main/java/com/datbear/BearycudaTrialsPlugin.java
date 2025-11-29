@@ -9,10 +9,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
 import com.datbear.data.*;
+import com.datbear.debug.BoatPathHelper;
+import com.datbear.debug.BoatPathOverlay;
 import com.datbear.ui.*;
 import com.google.common.base.Strings;
 import com.google.inject.Provides;
@@ -34,6 +37,7 @@ import net.runelite.api.Renderable;
 import net.runelite.api.Scene;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
@@ -41,11 +45,11 @@ import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.PostMenuSort;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.events.WorldViewUnloaded;
+import net.runelite.api.gameval.ObjectID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.gameval.InterfaceID.SailingSidepanel;
-import net.runelite.api.widgets.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetID;
 import net.runelite.client.Notifier;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.config.ConfigManager;
@@ -71,6 +75,11 @@ public class BearycudaTrialsPlugin extends Plugin {
     private BearycudaTrialsOverlay overlay;
 
     @Inject
+    private BoatPathOverlay boatPathOverlay;
+
+    private boolean boatPathOverlayAdded = false;
+
+    @Inject
     private BearycudaTrialsPanel panel;
 
     @Provides
@@ -94,6 +103,9 @@ public class BearycudaTrialsPlugin extends Plugin {
 
     private static final int VISIT_TOLERANCE = 10;
 
+    private static final int WIND_MOTE_INACTIVE_SPRITE_ID = 7076;
+    private static final int WIND_MOTE_ACTIVE_SPRITE_ID = 7075;
+
     private List<String> FirstMenuEntries = new ArrayList<String>();
     private List<String> DeprioritizeMenuEntriesDuringTrial = new ArrayList<String>();
     private List<String> RemoveMenuEntriesDuringTrial = new ArrayList<String>();
@@ -114,7 +126,10 @@ public class BearycudaTrialsPlugin extends Plugin {
     // Used to allow a grace period before clearing currentTrial during transient nulls
     private int nullTrialConsecutiveTicks = 0;
 
-    private final Set<Integer> BOAT_WORLD_ENTITY_IDS = Set.of(12);
+    private final Set<Integer> TRIAL_BOAT_GAMEOBJECT_IDS = Set.of(
+            ObjectID.SAILING_BT_TEMPOR_TANTRUM_NORTH_LOC_PARENT,
+            ObjectID.SAILING_BT_TEMPOR_TANTRUM_SOUTH_LOC_PARENT,
+            ObjectID.SAILING_BT_JUBBLY_JIVE_TOAD_SUPPLIES_PARENT);
 
     private final Map<Integer, List<GameObject>> toadFlagsById = new HashMap<>();
     @Getter(AccessLevel.PACKAGE)
@@ -128,6 +143,9 @@ public class BearycudaTrialsPlugin extends Plugin {
     private final Map<Integer, List<GameObject>> obstacleGameObjectsById = new HashMap<>();
     @Getter(AccessLevel.PACKAGE)
     private final Set<WorldPoint> obstacleWorldPoints = new HashSet<>();
+
+    @Getter(AccessLevel.PACKAGE)
+    private Map<Integer, GameObject> trialBoatsById = new HashMap<>();
 
     @Getter(AccessLevel.PACKAGE)
     private Point lastMenuCanvasPosition = null;
@@ -159,6 +177,9 @@ public class BearycudaTrialsPlugin extends Plugin {
     @Getter(AccessLevel.PACKAGE)
     private int isInTrial;
 
+    @Getter(AccessLevel.PUBLIC)
+    private int boardedBoat;
+
     @Getter(AccessLevel.PACKAGE)
     private Directions currentHeadingDirection = Directions.North;
 
@@ -174,10 +195,20 @@ public class BearycudaTrialsPlugin extends Plugin {
     @Getter(AccessLevel.PACKAGE)
     private Widget windMoteButtonWidget;
 
+    @Getter(AccessLevel.PACKAGE)
+    private double lastCratePickupDistance;
+
+    @Getter(AccessLevel.PACKAGE)
+    private double minCratePickupDistance;
+
+    @Getter(AccessLevel.PACKAGE)
+    private double maxCratePickupDistance;
+
     @Override
     protected void startUp() {
         //log.info("Bearycuda Trials Plugin started!");
         overlayManager.add(overlay);
+        refreshBoatPathOverlayState();
         overlayManager.add(panel);
 
         //menu entries
@@ -198,9 +229,50 @@ public class BearycudaTrialsPlugin extends Plugin {
     @Override
     protected void shutDown() {
         overlayManager.remove(overlay);
+        overlayManager.remove(boatPathOverlay);
+        boatPathOverlayAdded = false;
         overlayManager.remove(panel);
         reset();
         //log.info("BearycudaTrialsPlugin shutDown: panel removed and state reset.");
+    }
+
+    private void refreshBoatPathOverlayState() {
+        if (config.enableBoatPathDebug()) {
+            if (!boatPathOverlayAdded) {
+                overlayManager.add(boatPathOverlay);
+                boatPathOverlayAdded = true;
+            }
+        } else if (boatPathOverlayAdded) {
+            overlayManager.remove(boatPathOverlay);
+            boatPathOverlayAdded = false;
+        }
+    }
+
+    @Subscribe
+    public void onClientTick(ClientTick clientTick) {
+        if (!config.enableBoatPathDebug()) {
+            return;
+        }
+
+        var localPlayer = client.getLocalPlayer();
+        if (localPlayer == null) {
+            return;
+        }
+
+        var tick = client.getTickCount();
+        var position = BoatLocation.fromLocal(client, localPlayer.getLocalLocation());
+        if (tick <= 0 || position == null) {
+            return;
+        }
+
+        //log.info("Client tick! {} {}", tick, position);
+
+        if (BoatPathHelper.HasTickData(tick)) {
+            //log.info("Adding visited point for tick {}: {}", tick, position);
+            BoatPathHelper.AddVisitedPoint(tick, position);
+        } else {
+            BoatPathHelper.StartNewTick(tick, position, currentHeadingDirection);
+        }
     }
 
     @Subscribe
@@ -216,14 +288,14 @@ public class BearycudaTrialsPlugin extends Plugin {
         updateWindMoteButtonWidget();
 
         final var player = client.getLocalPlayer();
-        var playerPoint = BoatLocation.fromLocal(client, player.getLocalLocation());
+        var boatLocation = BoatLocation.fromLocal(client, player.getLocalLocation());
 
-        if (playerPoint == null)
+        if (boatLocation == null)
             return;
 
         TrialRoute active = getActiveTrialRoute();
         if (active != null) {
-            markNextWaypointVisited(playerPoint, active, VISIT_TOLERANCE);
+            markNextWaypointVisited(boatLocation, active, VISIT_TOLERANCE);
         }
     }
 
@@ -234,6 +306,8 @@ public class BearycudaTrialsPlugin extends Plugin {
             boatSpawnedAngle = event.getValue();
             updateCurrentHeadingFromVarbit(boatSpawnedAngle);
         }
+
+        trackCratePickups(event);
     }
 
     private void updateCurrentHeadingFromVarbit(int value) {
@@ -259,6 +333,13 @@ public class BearycudaTrialsPlugin extends Plugin {
         if (isToadFlag) {
             toadFlagsById.computeIfAbsent(id, k -> new ArrayList<>()).add(obj);
         }
+        var isTrialBoat = TRIAL_BOAT_GAMEOBJECT_IDS.contains(id);
+        if (isTrialBoat) {
+            trialBoatsById.put(id, obj);
+            //log.info("Tracked trial boat gameobject id {} at {} - {}", id, obj.getWorldLocation(), BoatLocation.fromLocal(client, obj.getLocalLocation()));
+
+        }
+
         var isObstacle = ObstacleTracking.OBSTACLE_GAMEOBJECT_IDS.contains(id);
         if (isObstacle && config.showObstacleOutlines()) {
             obstacleGameObjectsById.computeIfAbsent(id, k -> new ArrayList<>()).add(obj);
@@ -339,9 +420,19 @@ public class BearycudaTrialsPlugin extends Plugin {
     }
 
     @Subscribe
+    public void onWorldViewUnloaded(WorldViewUnloaded event) {
+        for (var boat : trialBoatsById.values()) {
+            if (event.getWorldView() == boat.getWorldView()) {
+                //log.info("Removing trial boat gameobject id {} at {} due to world view unload", boat.getId(), boat.getWorldLocation());
+                trialBoatsById.remove(boat.getId());
+            }
+        }
+    }
+
+    @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event) {
         RouteModificationHelper.handleMenuOptionClicked(event, client, getActiveTrialRoute(), lastMenuCanvasPosition, lastVisitedIndex);
-        manageHeadingClicks(event);
+        handleHeadingClicks(event);
 
         if (!config.showDebugMenuCopyTileOptions()) {
             return;
@@ -472,6 +563,8 @@ public class BearycudaTrialsPlugin extends Plugin {
                 DeprioritizeMenuEntriesDuringTrial.remove(MENU_OPTION_UNSET);
             }
         }
+
+        refreshBoatPathOverlayState();
     }
 
     @Subscribe
@@ -855,19 +948,33 @@ public class BearycudaTrialsPlugin extends Plugin {
     }
 
     public Collection<GameObject> getTrialBoatsToHighlight() {
-        // var route = getActiveTrialRoute();
-        // if (currentTrial == null || trialBoatsById.isEmpty() || route == null) {
-        //     return Collections.emptyList();
-        // }
+        var route = getActiveTrialRoute();
+        if (route == null || currentTrial == null || trialBoatsById.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        // if (route.Location == TrialLocations.JubblyJive && !currentTrial.HasToads) {
-        //     return trialBoatsById.values();
-        // }
+        if (route.Location == TrialLocations.JubblyJive && !currentTrial.HasToads) {
+            return trialBoatsById.values();
+        }
+
+        if (route.Location == TrialLocations.TemporTantrum) {
+            if (currentTrial.HasRum) {
+                var boat = trialBoatsById.get(ObjectID.SAILING_BT_TEMPOR_TANTRUM_NORTH_LOC_PARENT);
+                if (boat != null) {
+                    return List.of(boat);
+                }
+            } else {
+                var boat = trialBoatsById.get(ObjectID.SAILING_BT_TEMPOR_TANTRUM_SOUTH_LOC_PARENT);
+                if (boat != null) {
+                    return List.of(boat);
+                }
+            }
+        }
 
         return Collections.emptyList();
     }
 
-    private void manageHeadingClicks(MenuOptionClicked event) {
+    private void handleHeadingClicks(MenuOptionClicked event) {
         if (event.getMenuAction() != MenuAction.SET_HEADING) {
             return;
         }
@@ -931,6 +1038,7 @@ public class BearycudaTrialsPlugin extends Plugin {
         boatSpeedBoostDuration = client.getVarbitValue(VarbitID.SAILING_SIDEPANEL_BOAT_SPEEDBOOST_DURATION);
         boatAcceleration = client.getVarbitValue(VarbitID.SAILING_SIDEPANEL_BOAT_ACCELERATION);
         isInTrial = client.getVarbitValue(VarbitID.SAILING_BT_IN_TRIAL);
+        boardedBoat = client.getVarbitValue(VarbitID.SAILING_BOARDED_BOAT);
     }
 
     private void removeGameObjectFromScene(GameObject gameObject) {
@@ -946,6 +1054,102 @@ public class BearycudaTrialsPlugin extends Plugin {
                 }
             }
         }
+    }
+
+    private void updateWindMoteButtonWidget() {
+        if (boardedBoat == 0) {
+            windMoteButtonWidget = null;
+            return;
+        }
+
+        if (windMoteButtonWidget != null && !windMoteButtonWidget.isHidden()) {
+            return;
+        }
+
+        var widget = client.getWidget(SailingSidepanel.FACILITIES_ROWS);
+        if (widget == null) {
+            //log.info("updateWindMoteButtonWidget: FACILITIES_ROWS widget is null");
+            return;
+        }
+
+        Widget[] facilityChildren = widget.getChildren();
+        Widget button = null;
+        if (facilityChildren != null) {
+            for (Widget childWidget : facilityChildren) {
+                if (childWidget != null && (childWidget.getSpriteId() == WIND_MOTE_INACTIVE_SPRITE_ID || childWidget.getSpriteId() == WIND_MOTE_ACTIVE_SPRITE_ID)) {
+                    button = childWidget;
+                    break;
+                }
+            }
+        }
+        if (button != null) {
+            //log.info("updateWindMoteButtonWidget: found wind mote button widget");
+            if (windMoteButtonWidget == null) {
+                windMoteButtonWidget = button;
+            }
+        }
+    }
+
+    private void trackCratePickups(VarbitChanged event) {
+        if (!config.enableCratePickupDebug()) {
+            return;
+        }
+
+        if (event.getVarbitId() >= VarbitID.SAILING_BT_OBJECTIVE0 && event.getVarbitId() <= VarbitID.SAILING_BT_OBJECTIVE95) {
+            if (!config.enableCratePickupDebug()) {
+                return;
+            }
+            var closestCrate = getClosestTrialCrate();
+            if (closestCrate != null) {
+                var player = client.getLocalPlayer();
+                if (player != null) {
+                    var playerPoint = BoatLocation.fromLocal(client, player.getLocalLocation());
+                    if (playerPoint != null) {
+                        var cratePoint = closestCrate.getWorldLocation();
+                        lastCratePickupDistance = Math.hypot(Math.abs(playerPoint.getX() - cratePoint.getX()), Math.abs(playerPoint.getY() - cratePoint.getY()));
+                        log.info("Picked up crate from distance: {}", lastCratePickupDistance);
+                        if (minCratePickupDistance == 0 || lastCratePickupDistance < minCratePickupDistance) {
+                            minCratePickupDistance = lastCratePickupDistance;
+                        }
+                        if (lastCratePickupDistance > maxCratePickupDistance) {
+                            maxCratePickupDistance = lastCratePickupDistance;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private GameObject getClosestTrialCrate() {
+        if (!config.enableCratePickupDebug()) {
+            return null;
+        }
+
+        GameObject closest = null;
+        double closestDist = Double.MAX_VALUE;
+
+        var player = client.getLocalPlayer();
+        if (player == null) {
+            return null;
+        }
+        var playerPoint = BoatLocation.fromLocal(client, player.getLocalLocation());
+        if (playerPoint == null) {
+            return null;
+        }
+
+        for (var crateEntry : trialCratesById.entrySet()) {
+            var crate = crateEntry.getValue();
+            if (crate == null) {
+                continue;
+            }
+            var cratePoint = crate.getWorldLocation();
+            double dist = playerPoint.distanceTo(cratePoint);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closest = crate;
+            }
+        }
+        return closest;
     }
 
     private void logCrateAndBoostSpawns(GameObjectSpawned event) {
@@ -973,17 +1177,12 @@ public class BearycudaTrialsPlugin extends Plugin {
             return; // ignore unrelated animations
         }
 
-        WorldPoint wp = null;
-        try {
-            wp = gameObject.getWorldLocation();
-        } catch (Exception ex) {
-            log.info("GameObject (id={}) spawned but getWorldLocation threw: {}", gameObject.getId(), ex.toString());
-        }
+        WorldPoint wp = gameObject.getWorldLocation();
 
         ObjectComposition objectComposition = client.getObjectDefinition(gameObject.getId());
         if (objectComposition.getImpostorIds() == null) {
             String name = objectComposition.getName();
-            log.info("Gameobject (id={}) spawned with name='{}'", gameObject.getId(), name);
+            //log.info("Gameobject (id={}) spawned with name='{}'", gameObject.getId(), name);
             if (Strings.isNullOrEmpty(name) || name.equals("null")) {
                 // name has changed?
                 return;
@@ -1001,22 +1200,6 @@ public class BearycudaTrialsPlugin extends Plugin {
 
         } else {
             log.info("[SPAWN] {} -> GameObject id={} (no world point available)", type, gameObject.getId());
-        }
-    }
-
-    void updateWindMoteButtonWidget() {
-        var widget = client.getWidget(SailingSidepanel.FACILITIES_ROWS);
-        if (widget == null) {
-            //log.info("updateWindMoteButtonWidget: FACILITIES_ROWS widget is null");
-            return;
-        }
-
-        var button = widget.getChild(69);
-        if (button != null) {
-            //log.info("updateWindMoteButtonWidget: found wind mote button widget");
-            if (windMoteButtonWidget == null) {
-                windMoteButtonWidget = button;
-            }
         }
     }
 

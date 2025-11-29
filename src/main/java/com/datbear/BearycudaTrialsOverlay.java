@@ -11,8 +11,6 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 
 import javax.inject.Inject;
 
@@ -68,8 +66,6 @@ public class BearycudaTrialsOverlay extends Overlay {
 
         var playerLocation = player.getWorldLocation();
 
-        renderTrueInfo(graphics, boatLocation, playerLocation);
-
         renderLastMenuCanvasWorldPointOutline(graphics);
         highlightTrimmableSails(graphics);
 
@@ -81,13 +77,14 @@ public class BearycudaTrialsOverlay extends Overlay {
             return null;
         }
 
+        renderTrueInfo(graphics, boatLocation, playerLocation);
         renderPortalArrows(graphics, route, playerLocation);
         highlightToadFlags(graphics, boatLocation);
         highlightCrates(graphics);
         highlightBoosts(graphics);
         renderWindMote(graphics);
         renderWindMoteCooldown(graphics);
-        highlightTrialBoat(graphics);
+        highlightTrialBoat(graphics, boatLocation);
 
         var visible = plugin.getVisibleActiveLineForPlayer(boatLocation, 5);
         if (config.showRouteLines() && visible.size() >= 2) {
@@ -174,9 +171,12 @@ public class BearycudaTrialsOverlay extends Overlay {
         graphics.setColor(Color.WHITE);
 
         graphics.drawString("tick = " + client.getTickCount(), x, y += 15);
+        graphics.drawString("boarded boat = " + plugin.getBoardedBoat(), x, y += 15);
 
         var boatLoc = BoatLocation.fromLocal(client, player.getLocalLocation());
+        var playerLoc = player.getWorldLocation();
         graphics.drawString("boat loc = " + (boatLoc == null ? "null" : boatLoc.toString()), x, y += 15);
+        graphics.drawString("player loc = " + (playerLoc == null ? "null" : playerLoc.toString()), x, y += 15);
         if (active != null) {
             graphics.drawString("active route = " + active.Location + " " + active.Rank, x, y += 15);
         } else {
@@ -195,6 +195,17 @@ public class BearycudaTrialsOverlay extends Overlay {
         graphics.drawString("boatSpeedBoostDuration = " + plugin.getBoatSpeedBoostDuration(), x, y += 15);
         graphics.drawString("windMoteReleasedTick = " + plugin.getWindMoteReleasedTick(), x, y += 15);
         graphics.drawString("isInTrial = " + plugin.getIsInTrial(), x, y += 15);
+        if (config.enableCratePickupDebug()) {
+            if (plugin.getLastCratePickupDistance() > 0) {
+                graphics.drawString("lastCratePickupDistance = " + plugin.getLastCratePickupDistance(), x, y += 15);
+            }
+            if (plugin.getMinCratePickupDistance() > 0) {
+                graphics.drawString("minCratePickupDistance = " + plugin.getMinCratePickupDistance(), x, y += 15);
+            }
+            if (plugin.getMaxCratePickupDistance() > 0) {
+                graphics.drawString("maxCratePickupDistance = " + plugin.getMaxCratePickupDistance(), x, y += 15);
+            }
+        }
 
     }
 
@@ -240,7 +251,7 @@ public class BearycudaTrialsOverlay extends Overlay {
         }
     }
 
-    private void highlightToadFlags(Graphics2D graphics, WorldPoint player) {
+    private void highlightToadFlags(Graphics2D graphics, WorldPoint boatLocation) {
         if (!config.showJubblyToadHighlights()) {
             return;
         }
@@ -248,11 +259,11 @@ public class BearycudaTrialsOverlay extends Overlay {
         if (toadGameObjects == null || toadGameObjects.isEmpty()) {
             return;
         }
-        Color inRange = config.jubblyToadInRangeColor();
-        Color outRange = config.jubblyToadOutOfRangeColor();
+        Color inRangeColor = config.jubblyToadInRangeColor();
+        Color outRangeColor = config.jubblyToadOutOfRangeColor();
         for (var toadGameObject : toadGameObjects) {
-            var color = toadGameObject.getWorldLocation().distanceTo(player) < 15.2 ? inRange : outRange;
-            modelOutlineRenderer.drawOutline(toadGameObject, 4, color, 2);
+            var color = toadGameObject.getWorldLocation().distanceTo(boatLocation) <= 15 ? inRangeColor : outRangeColor;
+            modelOutlineRenderer.drawOutline(toadGameObject, 3, color, 2);
         }
     }
 
@@ -283,14 +294,17 @@ public class BearycudaTrialsOverlay extends Overlay {
         }
     }
 
-    private void highlightTrialBoat(Graphics2D graphics) {
-        //todo come back to this it doesn't work, the boats are world entities, not sure how to highlight those
+    private void highlightTrialBoat(Graphics2D graphics, WorldPoint boatLocation) {
+        if (!config.showTrialBoatHighlights()) {
+            return;
+        }
         var boats = plugin.getTrialBoatsToHighlight();
         if (boats == null || boats.isEmpty()) {
             return;
         }
+        Color highlightColor = config.trialBoatHighlightColor();
         for (var boat : boats) {
-            modelOutlineRenderer.drawOutline(boat, 2, Color.CYAN, 2);
+            modelOutlineRenderer.drawOutline(boat, 3, highlightColor, 2);
         }
     }
 

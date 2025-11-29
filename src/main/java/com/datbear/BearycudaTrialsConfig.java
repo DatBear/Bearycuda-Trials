@@ -134,6 +134,17 @@ public interface BearycudaTrialsConfig extends Config {
         return true;
     }
 
+    @ConfigItem(keyName = "showTrialBoatHighlights", name = "Show trial boat highlights", description = "Toggle outlining of the active trial boats", section = outlines, position = 23)
+    default boolean showTrialBoatHighlights() {
+        return true;
+    }
+
+    @Alpha
+    @ConfigItem(keyName = "trialBoatHighlightColor", name = "Trial boat highlight color", description = "Outline color used when highlighting trial boats", section = outlines, position = 24)
+    default Color trialBoatHighlightColor() {
+        return new Color(0, 255, 255, 200);
+    }
+
     // true boat tile / heading
     @ConfigItem(keyName = "showBoatTrueTile", name = "Show true boat tile", description = "Highlight the boat's true tile", section = boatTrueTileHeading, position = 1)
     default boolean showBoatTrueTile() {
@@ -218,6 +229,16 @@ public interface BearycudaTrialsConfig extends Config {
 
     @ConfigItem(keyName = "showDebugRouteModificationOptions", name = "Show debug route modification menu options", description = "Adds '[BT]' menu items for route modifications", section = debug, position = 3)
     default boolean showDebugRouteModificationOptions() {
+        return false;
+    }
+
+    @ConfigItem(keyName = "enableCratePickupDebug", name = "Track crate pickup distance", description = "Log and display crate pickup distances for debugging", section = debug, position = 4)
+    default boolean enableCratePickupDebug() {
+        return false;
+    }
+
+    @ConfigItem(keyName = "enableBoatPathDebug", name = "Show boat path overlay", description = "Draw boat path tiles for the last several ticks", section = debug, position = 5)
+    default boolean enableBoatPathDebug() {
         return false;
     }
 

@@ -112,7 +112,7 @@ public class TrialInfo {
     private static boolean HasRum(TrialLocations location, int spriteId) {
         switch (location) {
             case TemporTantrum:
-                return spriteId != 0;// todo fix
+                return spriteId == 7022;
             default:
                 return false;
         }
