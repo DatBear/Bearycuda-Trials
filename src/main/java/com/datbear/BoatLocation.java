@@ -14,7 +14,7 @@ public class BoatLocation {
 
         WorldView wv = client.getLocalPlayer().getWorldView();
         int wvid = wv.getId();
-        boolean isOnBoat = wvid != -1;
+        boolean isOnBoat = wvid != WorldView.TOPLEVEL;
         if (isOnBoat) {
             WorldEntity we = client.getTopLevelWorldView().worldEntities().byIndex(wvid);
             return WorldPoint.fromLocalInstance(client, we.getLocalLocation());
